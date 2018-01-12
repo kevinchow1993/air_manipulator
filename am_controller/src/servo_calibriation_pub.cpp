@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 					 servo_msg.request.action_time = 2000;
 					 servo_calibriation.call(servo_msg);
 					 printf("set servo pose:%d	%d	%d	0.19\n",servo1,servo2,servo3);
-					 while(servo_msg.response.is_done == false&ros::ok())
+					 while(servo_msg.response.is_done == false&&ros::ok())
 					 servo_msg.request.cmd = 1;
 					 servo_calibriation.call(servo_msg);
 					 printf("get servo pose:%lf	%lf	%lf	%lf\n",servo_msg.response.servo_pos1,
