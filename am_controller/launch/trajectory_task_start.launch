@@ -1,0 +1,4 @@
+<launch>
+   <node name="trajectory_task_flag_puber" pkg="am_controller" type="trajectory_task_flag_puber" output="screen">
+   </node>
+</launch>

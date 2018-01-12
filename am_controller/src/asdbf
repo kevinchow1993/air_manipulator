@@ -1,0 +1,38 @@
+link[link_no].a[0]=link[link_no].theta_0;
+		link[link_no].a[1]=link[link_no].vel_0;
+		link[link_no].a[2]=link[link_no].acc_0/2.0;
+		link[link_no].a[3]=	(
+						20.0*link[link_no].theta_m-20.0*link[link_no].theta_0
+						-(8.0*link[link_no].vel_m+12.0*link[link_no].vel_0)*link[link_no].t_m
+						-(3.0*link[link_no].acc_0-link[link_no].acc_m)*link[link_no].t_m*link[link_no].t_m
+					)/(2.0*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m);
+		link[link_no].a[4]=	(
+						-30.0*link[link_no].theta_m+30.0*link[link_no].theta_0
+						+(14.0*link[link_no].vel_m+16.0*link[link_no].vel_0)*link[link_no].t_m
+						+(3.0*link[link_no].acc_0-2.0*link[link_no].acc_m)*link[link_no].t_m*link[link_no].t_m
+					)/(2.0*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m);
+		link[link_no].a[5]=	(
+						12.0*link[link_no].theta_m-12.0*link[link_no].theta_0
+						-(6.0*link[link_no].vel_m+6.0*link[link_no].vel_0)*link[link_no].t_m
+						-(link[link_no].acc_0-link[link_no].acc_m)*link[link_no].t_m*link[link_no].t_m
+					)/(2.0*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m*link[link_no].t_m);
+
+
+		link[link_no].b[0]=link[link_no].theta_m;
+		link[link_no].b[1]=link[link_no].vel_m;
+		link[link_no].b[2]=link[link_no].acc_m/2.0;
+		link[link_no].b[3]=	(
+						20.0*link[link_no].theta_f-20.0*link[link_no].theta_m
+						-(8.0*link[link_no].vel_f+12.0*link[link_no].vel_m)*link[link_no].t_f
+						-(3.0*link[link_no].acc_m-link[link_no].bcc_f)*link[link_no].t_f*link[link_no].t_f
+					)/(2.0*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f);
+		link[link_no].b[4]=	(
+						-30.0*link[link_no].theta_f+30.0*link[link_no].theta_m
+						+(14.0*link[link_no].vel_f+16.0*link[link_no].vel_m)*link[link_no].t_f
+						+(3.0*link[link_no].acc_m-2.0*link[link_no].bcc_f)*link[link_no].t_f*link[link_no].t_f
+					)/(2.0*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f);
+		link[link_no].b[5]=	(
+						12.0*link[link_no].theta_f-12.0*link[link_no].theta_m
+						-(6.0*link[link_no].vel_f+6.0*link[link_no].vel_m)*link[link_no].t_f
+						-(link[link_no].acc_m-link[link_no].bcc_f)*link[link_no].t_f*link[link_no].t_f
+					)/(2.0*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f*link[link_no].t_f);

@@ -1,0 +1,6 @@
+<launch>
+   <node name="path_rc_test" pkg="fly_path_flx" type="path_rc_test" output="screen"/>
+   
+ 
+   
+</launch>

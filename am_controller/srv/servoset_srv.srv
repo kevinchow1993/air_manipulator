@@ -1,0 +1,12 @@
+int32 cmd
+float64 pos1
+float64 pos2
+float64 pos3
+float64 pos4
+int32 action_time
+---
+float64 servo_pos1
+float64 servo_pos2
+float64 servo_pos3
+float64 servo_pos4
+int32 is_done

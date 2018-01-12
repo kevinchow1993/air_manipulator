@@ -1,0 +1,9 @@
+<launch>
+ 
+  
+   <node name="global_control" pkg="camera_control" type="global_control" output="screen"/>
+   <node name="rc_state" pkg="camera_control" type="rc_state" output="screen"/>
+
+
+
+</launch>

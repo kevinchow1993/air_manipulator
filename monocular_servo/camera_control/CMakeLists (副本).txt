@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(Camera_Control)
+
+add_definitions(-std=c++11)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  tf
+  std_msgs
+  gazebo_msgs
+  message_generation
+  geometry_msgs
+  nav_msgs
+  mavros_msgs
+)
+
+
+add_message_files(FILES CameraPos.msg)
+add_service_files(FILES ServoPos.srv)
+add_service_files(FILES TagLost.srv)
+add_service_files(FILES Grasping.srv)
+
+generate_messages(DEPENDENCIES std_msgs geometry_msgs nav_msgs)
+
+catkin_package(CATKIN_DEPENDS message_runtime)
+
+
+include_directories(include
+${catkin_INCLUDE_DIRS}
+)
+
+add_executable(camera_servo src/camera_servo.cpp src/serial.cpp src/timeout.cpp)
+target_link_libraries(camera_servo ${catkin_LIBRARIES})
+add_dependencies(camera_servo Camera_Control_generate_messages_cpp)
+
+add_executable(camera_servo_action src/camera_servo_action.cpp)
+target_link_libraries(camera_servo_action ${catkin_LIBRARIES})
+add_dependencies(camera_servo_action Camera_Control_generate_messages_cpp)
+
+add_executable(easy_grasp src/easy_grasp.cpp)
+target_link_libraries(easy_grasp ${catkin_LIBRARIES})
+add_dependencies(easy_grasp Camera_Control_generate_messages_cpp)
+
+
+install(DIRECTORY config
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

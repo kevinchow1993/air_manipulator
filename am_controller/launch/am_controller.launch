@@ -1,0 +1,7 @@
+<launch>
+ <arg name="COM_Port" default="$(find am_controller)/launch/port_set.yaml"/>
+  <rosparam command="load" file="$(arg COM_Port)" />
+   <node name="serial_ros_flx" pkg="am_controller" type="serial_ros_flx" output="screen">
+    <rosparam command="load" file="$(arg COM_Port)" />
+   </node>
+</launch>

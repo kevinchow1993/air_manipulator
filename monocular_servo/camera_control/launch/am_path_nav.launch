@@ -1,0 +1,35 @@
+<launch>
+
+   <arg name="server" default="localhost"/>
+
+  <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
+    <rosparam subst_value="true">
+      server: 192.168.1.105
+      port: 3883
+
+      update_frequency: 100.0
+      frame_id: world
+
+      # Use the VRPN server's time, or the client's ROS time.
+      use_server_time: false
+      broadcast_tf: true
+
+      # Must either specify refresh frequency > 0.0, or a list of trackers to create
+      refresh_tracker_frequency: 1.0
+      trackers:
+      - three
+      - bang1
+      - bang2
+      #- SecondTracker
+    </rosparam>
+    <remap from="/vrpn_client_node/three/pose" to="/mavros/vision_pose/pose"/>
+  </node>
+
+
+   <node name="fly_path" pkg="serial_am" type="fly_path" output="screen">
+   </node>
+    <node name="path_planner" pkg="serial_am" type="path_planner" output="screen">
+   </node>
+    <node name="rc_control" pkg="serial_am" type="rc_control" output="screen">
+   </node>
+</launch>

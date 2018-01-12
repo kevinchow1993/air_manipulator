@@ -1,0 +1,5 @@
+<launch>
+   <node name="tango_pose" pkg="fly_path_flx" type="tango_pose.py" output="screen">
+	<remap from="/tango_pose" to="/mavros/vision_pose/pose"/>
+   </node>
+</launch>
