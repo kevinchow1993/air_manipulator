@@ -377,6 +377,7 @@ bool pos_serv_CallBack(am_controller::servoset_srv::Request &msg,am_controller::
 			printf("try set_kin_agnle_t\n" );
 			set_kinpos_t(msg.pos1,msg.pos2,msg.pos3,msg.pos4 ,msg.action_time);
 			printf("set set_kin_agnle_t:%lf   %lf   %lf    %lf  atime:%d\n",msg.pos1,msg.pos2,msg.pos3,msg.pos4,msg.action_time );
+			while(get_current_servopos(res.servo_pos1,res.servo_pos2,res.servo_pos3,res.servo_pos4)==false);
 			res.is_done=1;
 			break;
 		case 6:
@@ -418,7 +419,7 @@ int main(int argc, char** argv)
 	ros::Timer timer = n.createTimer(ros::Duration(0.002), timerCallback);
 	ros::ServiceServer pos_service = n.advertiseService("/am_controller/servoset_srv", pos_serv_CallBack);
 
-	ros::Duration(2.0).sleep();
+	ros::Duration(2.0).sleep();	
 	set_kinpos_t(-10,170,-70,0,3000);
 	ros::MultiThreadedSpinner s(4);
   	ros::spin(s);
