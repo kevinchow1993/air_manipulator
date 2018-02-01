@@ -65,11 +65,11 @@ void Set_Servo_Pos(int pos)
 {
 	if (pos>150)pos=150;if (pos<43)pos=43;
 	char cmd[100];
-	sprintf(cmd,"%ds",pos);
+	sprintf(cmd,"%ds",pos);// 字符串格式化
 	//printf("%ds\n",pos);
-	serial.Write(cmd,strlen(cmd));
+	serial.Write(cmd,strlen(cmd));//命令写到串口
 	//Dpose=-90.0/96.0*pos+90.0+52.0*90.0/96.0;//k=-0.9375   b=138.75
-	Dpose=-0.967742*pos+145.16129;
+	Dpose=-0.967742*pos+145.16129;//what is Dpose??
 
 	if(Dpose>70)great_70_cnt++;
 	else great_70_cnt=0;
@@ -186,6 +186,7 @@ void init_Tlc(void)
 	Vector3d Olc(0.0394777,-0.00845416,0.0742496);
 	Tlc<<Rlc;Tlc.col(3)<<Olc;
 }
+
 void init_Tmb(void)
 {
 	//Tmb init
