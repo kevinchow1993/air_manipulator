@@ -345,14 +345,13 @@ int main (int argc, char **argv)
 {
   ros::init(argc, argv, "trajectory_controller");
   trajectory_controller m_trajectory;
-
+/*
  /* #ifdef make_control_recorder
     target_file_recorder.open("/home/flx/catkin_al/target_recorder.txt",ios::out|ios::trunc);
     correct_trajectory_file_recorder.open("/home/flx/catkin_al/correct_trajectory_recorder.txt",ios::out|ios::trunc);
     if(target_file_recorder==NULL)ROS_INFO("NULL FILE PTR1");   
     if(correct_trajectory_file_recorder==NULL)ROS_INFO("NULL FILE PTR2");   
   #endif*/
-
 
   m_trajectory.wait_for_task();
   m_trajectory.init_manipulator();

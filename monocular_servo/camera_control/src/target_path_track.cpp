@@ -1,4 +1,5 @@
 #include "target_path_track.hpp"
+#include <iostream>
 
 using namespace std;
 using namespace Eigen; 
@@ -14,13 +15,15 @@ target_path_track::target_path_track():
 		is_valid_track_target(false),
 		TagLost_flag(false)
 {
-	init_Tlc();
+	init_Tlc();//zkq: transform from link to camera
 	n.param<std::string>("COM_dev",com_cs,"/dev/ttyUSB_CP210X");
 	m_serial.Open((char*)com_cs.c_str(), 9600, 8, NO, 1);
-	Set_Servo_Pos(last_pose);
+	Set_Servo_Pos(last_pose);//camera 的初始位置
 	ros::Duration(2.0).sleep();
+
 	Camera_Pos_suber=n.subscribe("/camera_servo_pose",1,&target_path_track::CameraPos_CallBack,this);//call by aprilTags pack.
 	Interest_ID_seter = n.advertiseService("/target_tracker/set_interest_id", &target_path_track::Set_interest_ID,this);
+	//发布机体坐标系到apriltag的坐标变换
 	Tba_puber=n.advertise<am_controller::Mat_Tba>("/Tba_current",1);
 }
 
@@ -45,6 +48,7 @@ void target_path_track::Set_Servo_Pos(int pos)
 	m_serial.Write(cmd,strlen(cmd));
 	//Dpose=-90.0/96.0*pos+90.0+52.0*90.0/96.0;//k=-0.9375   b=138.75
 	Dpose=-0.967742*pos+145.16129;
+	ROS_INFO("---\npos = %d\nDpose = %lf\n",pos,Dpose);
 	if(Dpose>70)great_70_cnt++;
 	else great_70_cnt=0;
 	if(great_70_cnt>100&&current_interest_id==35)
@@ -54,6 +58,7 @@ void target_path_track::Set_Servo_Pos(int pos)
 	}
 }
 
+//设置机体坐标系和相机旋转坐标系的变换，由相机轴旋转角度决定
 void target_path_track::set_Tbl_by_Dpose(void)
 {
 	double cosb=cos(Dpose/180.0*pi);
@@ -63,7 +68,7 @@ void target_path_track::set_Tbl_by_Dpose(void)
 	Tbl(2,0)=-sinb;		Tbl(2,1)=0.0;		Tbl(2,2)=cosb;		Tbl(2,3)=-0.1105;
 	Tbl(3,0)=0.0;		Tbl(3,1)=0.0;		Tbl(3,2)=0.0;		Tbl(3,3)=1.0;
 }
-
+//将机体坐标系到apriltag坐标系的旋转发布出去
 void target_path_track::limited_Tba_puber(void)
 {
 	static double last_call_time=0;
@@ -74,7 +79,7 @@ void target_path_track::limited_Tba_puber(void)
 	}
 	
 }
-
+//检测apriltag 从这里看，apriltag得到的数据为相机坐标系下的
 void target_path_track::target_detector(const geometry_msgs::PoseStamped &pose,int id)
 {
 	Quaterniond q(pose.pose.orientation.w,pose.pose.orientation.x,pose.pose.orientation.y,pose.pose.orientation.z);
@@ -93,6 +98,8 @@ void target_path_track::target_detector(const geometry_msgs::PoseStamped &pose,i
 	Matrix3d M_rotation;
 	M_rotation<<Tba;
 	Quaterniond q_angles(M_rotation);
+
+	//发布apriltag坐标系到机体坐标系的坐标变换
 	static tf::TransformBroadcaster br;
 	tf::Transform transform;
 	transform.setOrigin( tf::Vector3(Tba(0,3), Tba(1,3), Tba(2,3) ));
@@ -105,6 +112,7 @@ void target_path_track::target_detector(const geometry_msgs::PoseStamped &pose,i
 
 }
 
+//伺服控制
 void target_path_track::CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg)
 {
 	if(msg->id!=25&&msg->id!=35)return;
@@ -142,6 +150,7 @@ void target_path_track::init_Tlc(void)
 	Tlc<<Rlc;Tlc.col(3)<<Olc;
 }
 
+//控制舵机始终能找到apriltag
 void target_path_track::loop(void)
 {
 	ros::Rate loop_rate(1000);

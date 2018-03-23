@@ -47,7 +47,7 @@ add_dependencies(target_tracker camera_control_generate_messages_cpp)
 add_executable(target_endeffector_track src/target_endeffector_track.cpp src/serial.cpp src/timeout.cpp)
 target_link_libraries(target_endeffector_track ${catkin_LIBRARIES})
 add_dependencies(target_endeffector_track camera_control_generate_messages_cpp)
-
+#！！！
 add_executable(target_path_track src/target_path_track.cpp src/serial.cpp src/timeout.cpp)
 target_link_libraries(target_path_track ${catkin_LIBRARIES})
 add_dependencies(target_path_track camera_control_generate_messages_cpp)
@@ -59,7 +59,7 @@ add_dependencies(global_control camera_control_generate_messages_cpp)
 add_executable(rc_state src/rc_state.cpp)
 target_link_libraries(rc_state ${catkin_LIBRARIES})
 add_dependencies(rc_state camera_control_generate_messages_cpp)
-
+##！！！
 add_executable(global_rc_path_plan src/global_rc_path_plan.cpp)
 target_link_libraries(global_rc_path_plan ${catkin_LIBRARIES})
 add_dependencies(global_rc_path_plan camera_control_generate_messages_cpp)

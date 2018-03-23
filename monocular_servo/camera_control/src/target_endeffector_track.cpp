@@ -60,7 +60,7 @@ int great_70_cnt;
 	double rec_y;
 	double rec_z;
 #endif
-
+//从这里看，pos是舵机关节角度，Dpose是运动学角度
 void Set_Servo_Pos(int pos)
 {
 	if (pos>150)pos=150;if (pos<43)pos=43;
@@ -70,7 +70,7 @@ void Set_Servo_Pos(int pos)
 	serial.Write(cmd,strlen(cmd));//命令写到串口
 	//Dpose=-90.0/96.0*pos+90.0+52.0*90.0/96.0;//k=-0.9375   b=138.75
 	Dpose=-0.967742*pos+145.16129;//what is Dpose??
-
+    ROS_INFO("---\npos = %d\nDpose = %lf\n",pos,Dpose);
 	if(Dpose>70)great_70_cnt++;
 	else great_70_cnt=0;
 	if(great_70_cnt>100&&current_interest_id==35)

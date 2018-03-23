@@ -197,11 +197,15 @@ void target_detector( geometry_msgs::PoseStamped &pose)
 			//cout<<rol*180.0/pi<<"\t\t"<<pit*180.0/pi<<"\t\t"<<yaw*180.0/pi<<endl;
 		    	M_rotation<<Twa;
 			Quaterniond q_wa(M_rotation);
+			//发布tf变换
 			static tf::TransformBroadcaster br;
 			tf::Transform transform;
+			//transform 包含一个旋转和一个平移，作为sendtransform的第一的参数
 			transform.setOrigin( tf::Vector3(World_pose_msg.wx, World_pose_msg.wy, World_pose_msg.wz) );
 			tf::Quaternion tf_q(q_wa.x(),q_wa.y(),q_wa.z(),q_wa.w());
 			transform.setRotation(tf_q);
+			//发布目标物和世界坐标系的坐标变换
+			//第一个参数是带时间戳的旋转平移，第二个参数是母节点存储的参考系，第三个参数是子节点存储的参考系
 			br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/world", "/grasp_target"));
 		
 }
@@ -270,6 +274,7 @@ int main(int argc, char** argv)
 
 	ros::Duration(2.0).sleep();
 	ros::Subscriber Camera_Pos_suber=n.subscribe("/camera_servo_pose",1,CameraPos_CallBack);//call by aprilTags pack.
+	//客户端，服务端在global rc path plan
 	ros::ServiceClient tag_lost_puber=n.serviceClient<camera_control::TagLost>("/TagLost");
 
 	// ros::ServiceClient id_world_pose_puber = n.serviceClient<camera_control::World_pose>("/target_tracker/target_world_pose");
@@ -277,7 +282,7 @@ int main(int argc, char** argv)
 
 
 
-
+	//服务端，客户端在global rc path plan
 	ros::ServiceServer Interest_ID_seter = n.advertiseService("/target_tracker/set_interest_id", Set_interest_ID);
 	ros::Subscriber local_pose_suber=n.subscribe("/mavros/vision_pose/pose",1,Local_pose_CallBack);///mavros/vision_pose/pose
 

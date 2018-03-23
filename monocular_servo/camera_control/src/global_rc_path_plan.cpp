@@ -78,6 +78,8 @@ void trajectory_follow_success_flag_CallBack(const am_controller::success_flagCo
 	}
 }
 
+
+//将机体坐标装进全局变量中使用，并发布tf
 void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg)
 {
 	mav_x=msg->pose.position.x;
@@ -95,7 +97,7 @@ void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg)
 	Twb=MatrixXd::Zero(4,4);Twb(3,3)=1.0;
 	Twb<<Rwb;Twb.col(3)<<Owb;
 
-
+    //发布世界坐标系到body坐标系的转换
 	static tf::TransformBroadcaster br;
 	tf::Transform transform;
 	transform.setOrigin( tf::Vector3(mav_x,mav_y,mav_z ));
@@ -155,7 +157,7 @@ void generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z
 	m_path.header.stamp = ros::Time::now();
 	m_path.header.frame_id = "/world";
 	double qx,qy,qz,qw;
-	if(use_path_dir)
+	if(use_path_dir)//机头朝向目标物飞过去
 		get_direction_by_line(mav_x,mav_y,des_x,des_y,qw,qx,qy,qz,offset_angle);
 	else 
 	{
@@ -178,10 +180,11 @@ void generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z
 	//if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
 	double des_step,des_length;
 	des_step=0.05;
-	des_length=get_err(mav_x,mav_y,des_z,des_x,des_y,des_z);
+	des_length=get_err(mav_x,mav_y,des_z,des_x,des_y,des_z);																								
 	double delt_x=des_step/des_length*(des_x-mav_x);
 	double delt_y=des_step/des_length*(des_y-mav_y);
 	//get_direct_by_line();
+	//首先生成路上的轨迹
 	for (int i = 1; i < des_length/des_step; ++i)
 	{
 		pose.pose.position.x =mav_x+i*delt_x;
@@ -192,6 +195,7 @@ void generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z
 	pose.pose.position.x =des_x;
 	pose.pose.position.y =des_y;
 	pose.pose.position.z = des_z;
+	//如果距离大于限定值，则将点压入轨迹
 	if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
 
 }
@@ -245,7 +249,7 @@ int main(int argc, char** argv)
 	ros::Subscriber local_pose_suber=n.subscribe("/mavros/vision_pose/pose",1,Local_pose_CallBack);///mavros/vision_pose/pose
 
 	ros::Publisher Path_puber = n.advertise<nav_msgs::Path>("/flx_path_plan",1);//gererator path and pub
-
+	//设置感兴趣的目标物的apriltag ID
 	ros::ServiceClient m_track_target = n.serviceClient<camera_control::set_interest_ID>("/target_tracker/set_interest_id");
 
 	ros::ServiceServer m_safe_state = n.advertiseService("/flx_safe_state", safe_state_callback);
@@ -276,7 +280,7 @@ int main(int argc, char** argv)
 		switch(global_state)
 		{
 			case FLY_ALONG_MARKER:
-			{
+			{ //标志位，判断是否还在这个循环中，这样写则进入这个状态的第一次会出现状态提示
 				if(global_state!=last_state)
 				{
 					ROS_INFO("FLY_ALONG_MARKER.....");
@@ -287,6 +291,7 @@ int main(int argc, char** argv)
 					nav_msgs::Path m_path;
 					generate_path(m_path,marker_wx,marker_wy,marker_wz+0.87,0.18,true,0.0);
 					if(m_path.poses.size()>0)Path_puber.publish(m_path);
+					//距离目标物足够近了，转而看小目标物，不看大目标物。
 					if(m_path.poses.size()>0&&m_path.poses.size()<7)//8
 					{
 						along_marker_path=true;
