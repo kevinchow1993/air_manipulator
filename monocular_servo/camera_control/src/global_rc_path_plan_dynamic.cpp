@@ -50,6 +50,9 @@ bool trajectory_follow_success;
 double set_yaw,current_yaw;
 geometry_msgs::Quaternion direction_yaw;
 
+double last_time;
+double now;
+double x_dot,y_dot,z_dot;
 void get_direction_by_line(double m_x,double m_y,double d_x,double d_y,double &qw,double &qx,double &qy,double &qz,double offset_angle)
 {
 	double fai,theta,psai;
@@ -92,6 +95,17 @@ void CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg){
 //将机体坐标装进全局变量中使用，并发布tf
 void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg)
 {
+	now = ros::Time::now().toSec();
+	double dt = now-last_time;
+	last_time=now;
+	//if(dt>0.05){
+	x_dot = (msg->pose.position.x-mav_x)/dt;
+	y_dot = (msg->pose.position.y-mav_y)/dt;
+	z_dot = (msg->pose.position.z-mav_z)/dt;
+	mav_x= msg->pose.position.x;
+	mav_y = msg->pose.position.y;
+	mav_z = msg->pose.position.z;
+
 	mav_x=msg->pose.position.x;
   	mav_y=msg->pose.position.y;
   	mav_z=msg->pose.position.z;

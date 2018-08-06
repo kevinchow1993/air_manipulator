@@ -9,4 +9,6 @@ float64 servo_pos1
 float64 servo_pos2
 float64 servo_pos3
 float64 servo_pos4
+float64 target_x
+float64 target_y
 int32 is_done

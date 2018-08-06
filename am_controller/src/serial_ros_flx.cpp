@@ -6,7 +6,7 @@
 #include "Kin.h"
 #include <fstream>
 #include <iostream>
-
+#include <Eigen/Eigen>
 #define make_state_recorder
 
 #ifdef make_state_recorder
@@ -17,7 +17,8 @@
 	
 
 
-
+double target_x;
+double target_y;
 
 // Create serial port
 serial serial;
@@ -84,6 +85,10 @@ bool get_current_servopos(double &servo_pos1,double &servo_pos2,double &servo_po
 				servo_pos2=s_servo_pos2/10.0;
 				servo_pos3=s_servo_pos3/10.0;
 				servo_pos4=s_servo_pos4/10.0;
+		
+
+				
+				
 				return true;
 			}
 			else
@@ -162,13 +167,18 @@ void set_servopos_t(double servo_pos1,double servo_pos2,double servo_pos3,double
 	serial.Write((char*)cmd_buffer,buffer_length);
 }
 
-void grasp_action(unsigned int action_time)
+void grasp_action(double servo_pos5,unsigned int action_time)
 {
 	byte buffer_length;
+	unsigned short s_servo_pos5;
 	byte cmd_buffer[200]={0x24,0x4D,0x3E};//$M>
-	cmd_buffer[3]=1;//date length.
+	cmd_buffer[3]=4;//date length.
 	cmd_buffer[4]=4;//cmd code;
-	cmd_buffer[5]	=action_time;
+	s_servo_pos5=(unsigned short)(servo_pos5*10);
+	cmd_buffer[5]	=s_servo_pos5/256;	cmd_buffer[6]	=s_servo_pos5%256;
+	cmd_buffer[7]	=action_time/256;	cmd_buffer[8]	=action_time%256;
+
+	
 	buffer_length=6+cmd_buffer[3];
 	cmd_buffer[buffer_length-1]=getChecksum(cmd_buffer[3],cmd_buffer[4],cmd_buffer+5);
 
@@ -202,12 +212,18 @@ void set_kinpos_t(double joint_pos1,double joint_pos2,double joint_pos3,double j
 		state_file_recorder<<setprecision(9)<<setiosflags(ios::fixed)<< ros::Time::now().toSec()-first_time<<" "<<joint_pos1/360*2.0*pi<<" "<<joint_pos2/360*2.0*pi<<" "<<joint_pos3/360*2.0*pi<<" "<<joint_pos4/360*2.0*pi<<" "<<action_time<<endl;
 	#endif
 	FLX_kinematics Kin; 
-	Kin.Forward_Kinematics(joint_pos1/360*2.0*pi,joint_pos2/360.0*2.0*pi,joint_pos3/360.0*2.0*pi,joint_pos4/360.0*2.0*pi);
+	Eigen::Matrix4d res_se;
+
+
+	Kin.Forward_Kinematics(joint_pos1/360*2.0*pi,joint_pos2/360.0*2.0*pi,joint_pos3/360.0*2.0*pi,joint_pos4/360.0*2.0*pi,res_se);
 	Kin.Show_Forward_Result_RT();
+	target_x = res_se(0,3);
+	target_y = res_se(1,3);
 
 	double servo_pos1=5.0-joint_pos1;
 	double servo_pos2=1.2*joint_pos2-25.0;
-	double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+207;
+	//double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+207;
+	double servo_pos3=-1.1*joint_pos2 -0.6444*joint_pos3+212;
 	double servo_pos4=joint_pos4+22;
 
 	printf("set pos:%lf   %lf   %lf    %lf  atime:%d\n",servo_pos1,servo_pos2,servo_pos3,servo_pos4,action_time );
@@ -353,7 +369,9 @@ bool pos_serv_CallBack(am_controller::servoset_srv::Request &msg,am_controller::
 		case 1:
 			printf("try get pos\n" );
 			 while(get_current_servopos(res.servo_pos1,res.servo_pos2,res.servo_pos3,res.servo_pos4)==false);
-			 printf("got pos:%lf   %lf   %lf    %lf \n",res.servo_pos1,res.servo_pos2,res.servo_pos3,res.servo_pos4 );
+			 res.target_x = target_x;
+			 res.target_y = target_y;
+			 printf("got pos:%lf   %lf   %lf    %lf   %lf   %lf \n",res.servo_pos1,res.servo_pos2,res.servo_pos3,res.servo_pos4,res.target_x,res.target_y);
 			 res.is_done=1;
 			 break;
 		case 2:
@@ -369,8 +387,9 @@ bool pos_serv_CallBack(am_controller::servoset_srv::Request &msg,am_controller::
 			res.is_done=1;
 			break;
 		case 4:
+		 	//10 du for grasp      60  for loose
 			printf("try grasp action\n" );
-			grasp_action(msg.action_time );
+			grasp_action(msg.pos1,msg.action_time );
 			res.is_done=1;
 			break;
 		case 5:
@@ -378,7 +397,9 @@ bool pos_serv_CallBack(am_controller::servoset_srv::Request &msg,am_controller::
 			set_kinpos_t(msg.pos1,msg.pos2,msg.pos3,msg.pos4 ,msg.action_time);
 			printf("set set_kin_agnle_t:%lf   %lf   %lf    %lf  atime:%d\n",msg.pos1,msg.pos2,msg.pos3,msg.pos4,msg.action_time );
 			while(get_current_servopos(res.servo_pos1,res.servo_pos2,res.servo_pos3,res.servo_pos4)==false);
-			res.is_done=1;
+			res.target_x = target_x;
+			res.target_y = target_y;
+ 			res.is_done=1;
 			break;
 		case 6:
 			printf("try kin_control\n" );
@@ -421,6 +442,7 @@ int main(int argc, char** argv)
 
 	ros::Duration(2.0).sleep();	
 	set_kinpos_t(-10,170,-70,0,3000);
+	grasp_action(60,200);
 	ros::MultiThreadedSpinner s(4);
   	ros::spin(s);
 

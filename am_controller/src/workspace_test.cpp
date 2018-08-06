@@ -10,7 +10,7 @@ bool  Valid_Angle(double joint_pos1,double joint_pos2,double joint_pos3,double j
 {
 		double servo_pos1=5.0-joint_pos1;
 		double servo_pos2=1.2*joint_pos2-25.0;
-		double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+207;
+		double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+212;
 		double servo_pos4=joint_pos4+2;
 		if (servo_pos1<0||servo_pos2<0||servo_pos3<0||servo_pos4<0||servo_pos1>180||servo_pos2>180||servo_pos3>180||servo_pos4>180)
 		{
@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 	// Kin.Forward_Kinematics(pi/4,-pi/5,pi/3,-pi/3);
 	// Kin.Show_Forward_Result_RT();
 
-	system("python ~/catkin_al/workspace_plot.py");
+	system("python ~/caktin_ware/workspace_plot.py");
 
 	return 0;
 

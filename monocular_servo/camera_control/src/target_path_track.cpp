@@ -63,9 +63,9 @@ void target_path_track::set_Tbl_by_Dpose(void)
 {
 	double cosb=cos(Dpose/180.0*pi);
 	double sinb=sin(Dpose/180.0*pi);
-	Tbl(0,0)=cosb;		Tbl(0,1)=0.0;		Tbl(0,2)=sinb;		Tbl(0,3)=0.1218;	//从body到link的偏移量
+	Tbl(0,0)=cosb;		Tbl(0,1)=0.0;		Tbl(0,2)=sinb;		Tbl(0,3)=0.205;	//从body到link的偏移量
 	Tbl(1,0)=0.0;		Tbl(1,1)=1.0;		Tbl(1,2)=0.0;		Tbl(1,3)=0.0;
-	Tbl(2,0)=-sinb;		Tbl(2,1)=0.0;		Tbl(2,2)=cosb;		Tbl(2,3)=-0.1105;
+	Tbl(2,0)=-sinb;		Tbl(2,1)=0.0;		Tbl(2,2)=cosb;		Tbl(2,3)=-0.062;
 	Tbl(3,0)=0.0;		Tbl(3,1)=0.0;		Tbl(3,2)=0.0;		Tbl(3,3)=1.0;
 }
 //将机体坐标系到apriltag坐标系的旋转发布出去
@@ -136,6 +136,10 @@ void target_path_track::CameraPos_CallBack(const camera_control::CameraPos::Cons
 	if (tag_center_y>=250)last_pose-=(d_err*d_p);
 	if (tag_center_y<230)last_pose+=(d_err*d_p);
 	if (last_pose>52.0+96.0)last_pose=52.0+96.0;if (last_pose<52.0)last_pose=52.0; 
+	///add by kevin 
+	//float yaw_err = tag_center_x - 320;
+	//yaw = current_yaw - yaw_err*d_p;
+
 	Set_Servo_Pos(last_pose);
 	ros::Duration(delay_factor*d_err*d_p).sleep();
 }
@@ -144,9 +148,9 @@ void target_path_track::init_Tlc(void)
 {
 	//Tlc init
 	Tlc=MatrixXd::Zero(4,4);Tlc(3,3)=1.0;
-	Quaterniond qlc(-0.484592,0.533285,-0.517225,0.461797);//w x y z but cout<<qld.coffes()  is  x y z w.
+	Quaterniond qlc(-0.5,0.5,-0.5,0.5);//w x y z but cout<<qld.coffes()  is  x y z w.
 	Matrix3d Rlc = qlc.toRotationMatrix(); // convert a quaternion to a 3x3 rotation matrix
-	Vector3d Olc(0.0394777,-0.00845416,0.0742496);
+	Vector3d Olc(0.038,0.0,0.0);
 	Tlc<<Rlc;Tlc.col(3)<<Olc;
 }
 

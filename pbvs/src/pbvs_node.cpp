@@ -46,7 +46,7 @@ void Set_Servo_Pos(int pos){
 		}
 		char cmd[100];
 		sprintf(cmd,"%ds",pos);//数字字符串化
-	//	serial.Write(cmd,strlen(cmd));//向串口写入数据
+		serial.Write(cmd,strlen(cmd));//向串口写入数据
 }
 
 
@@ -116,6 +116,7 @@ void CameraPos_CallBack(camera_control::CameraPos msg)
 	if(msg.id = 25){
 		tf::pointMsgToEigen(msg.pose.pose.position,t_c_o);
 		tf::quaternionMsgToEigen(msg.pose.pose.orientation,marker_quaternion);
+		
 		kindr::RotationQuaternionD kindr_quat(marker_quaternion);
 		kindr::AngleAxisD kindr_theta_U(kindr_quat);
 		marker_theta = kindr_theta_U.angle();
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
 	//serial.Open((char*)com_cs.c_str(), 9600, 8, NO, 1);
 	Set_Servo_Pos(last_pose);
 
-	ros::spin();
+	//ros::spin();
 	//serial.Close();
 	return 0;
 }

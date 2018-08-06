@@ -2,8 +2,14 @@
 #include "std_msgs/String.h"
 #include "cmath"
 
+#include <eigen_conversions/eigen_msg.h>//tf库中和eigen相互转换的库
+#include <tf_conversions/tf_eigen.h>
+#include <tf/transform_broadcaster.h>
+#include <geometry_msgs/PointStamped.h>
+#include <tf/transform_listener.h>
 
 #include "Eigen/Core"
+#include <Eigen/Geometry>
 #include "Eigen/Dense"
 #include "iostream"
 #define pi  3.1415926535898
@@ -50,6 +56,12 @@ int main(int argc, char *argv[])
 	//cout<<"sinc(0)="<<sinc(0)<<"\t"<<"sinc(pi/2)="<<sinc(pi/2)<<endl;
 	cout<<"L_e inverse =\n"<<L_e.inverse()<<endl;
 	cout<< "angle_axis to rotation matrix \n"<<thetaU.toRotationMatrix()<<endl;
+
+	Eigen::Quaterniond eigen_q(-0.484592,0.533285,-0.517225,0.461797);
+    cout<<"----Tlc_test----"<<endl;
+	cout<<eigen_q.toRotationMatrix()<<endl;
+	
+
 	
 
 

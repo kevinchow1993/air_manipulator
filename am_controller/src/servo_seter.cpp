@@ -54,7 +54,8 @@ int main(int argc,char** argv)
 			break;
 		case 4:
 			msg.request.cmd=4;
-			msg.request.action_time=atoi(argv[2]);
+			msg.request.pos1=atof(argv[2]);
+			msg.request.action_time=atof(argv[3]);
 			break;
 		case 5:
 			msg.request.cmd=5;

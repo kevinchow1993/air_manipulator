@@ -1,5 +1,5 @@
 <launch>
- 
+  <!--
   <node  pkg="apriltags_ros" type="apriltag_detector_node" name="apriltag_detector">
     <rosparam param="tag_descriptions">[
       {id: 0, size: 0.528000},
@@ -8,7 +8,8 @@
       {id: 35, size: 0.12000,frame_id: marker1}]
     </rosparam>
   </node>
-
+<node pkg="tf" type="static_transform_publisher" name="base_hand_broadcaster" args="1 0 0 0 0 0 1 base_link end_effector 100" />
+ -->
 
   <node ns="camera" pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera" output="screen">
     <param name="width" type="int" value="640" />
@@ -17,17 +18,23 @@
     <param name="fps" type="int" value="60" />
     <param name="frame" type="string" value="webcam" />
     <param name="device" type="string" value="/dev/video0" />
-    <param name="camera_info_url" type="string" value="file:///home/kevin/caktin_ware/src/pbvs/ost.yaml" />
+    <param name="camera_info_url" type="string" value="file://$(find ffcalib)/ost_c.yaml" />
     <remap from="/camera/camera_info" to="/f_camera/camera_info"/>
   </node>
   <node pkg="image_transport" name="republish_uvc"  type="republish" args="compressed in:=/camera/image_raw _image_transport:=compressed raw out:=/f_camera/image_raw" />
   <node ns="f_camera"  pkg="image_proc" name="image_proc"  type="image_proc" />
 
+  
+  
+  <arg name="COM_Port" default="$(find camera_control)/launch/port_set.yaml"/>
+  <rosparam command="load" file="$(arg COM_Port)" />
+   <node name="hand_eye_cal_sub" pkg="hand_eye_calibrate" type="hand_eye_cal_sub" output="screen">
+    <rosparam command="load" file="$(arg COM_Port)" />
+   </node>
+ #  static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
+ #  static_transform_publisher x y z qx qy qz qw frame_id child_frame_id  period_in_ms
+<node pkg="tf" type="static_transform_publisher" name="hand_camera_broadcaster" args="0.038 0 0 -90 0 -90 end_effector camera_link 100" />
 
- <!--
-   <node name="pbvs_node" pkg="pbvs" type="pbvs_node" output="screen">
 
-   </node>  
--->
 
 </launch>

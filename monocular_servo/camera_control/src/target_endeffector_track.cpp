@@ -19,7 +19,6 @@
 
 #define DATA_RECORD
 using namespace std;
-
 //#include "serial_am/ikMsg.h"
 // #include "am_controller/servoset_srv.h"
 
@@ -69,7 +68,7 @@ void Set_Servo_Pos(int pos)
 	//printf("%ds\n",pos);
 	serial.Write(cmd,strlen(cmd));//命令写到串口
 	//Dpose=-90.0/96.0*pos+90.0+52.0*90.0/96.0;//k=-0.9375   b=138.75
-	Dpose=-0.967742*pos+145.16129;//what is Dpose??
+	Dpose=-0.967742*pos+145.16129;//what is Dpose??//运动学角度
     ROS_INFO("---\npos = %d\nDpose = %lf\n",pos,Dpose);
 	if(Dpose>70)great_70_cnt++;
 	else great_70_cnt=0;
@@ -90,9 +89,9 @@ void set_Tbl_by_Dpose()
 {
 	double cosb=cos(Dpose/180.0*pi);
 	double sinb=sin(Dpose/180.0*pi);
-	Tbl(0,0)=cosb;		Tbl(0,1)=0.0;		Tbl(0,2)=sinb;		Tbl(0,3)=0.1218;	//从body到link的偏移量
+	Tbl(0,0)=cosb;		Tbl(0,1)=0.0;		Tbl(0,2)=sinb;		Tbl(0,3)=0.2050;	//从body到link的偏移量  Tbl(0,3)=0.1218;
 	Tbl(1,0)=0.0;		Tbl(1,1)=1.0;		Tbl(1,2)=0.0;		Tbl(1,3)=0.0;
-	Tbl(2,0)=-sinb;		Tbl(2,1)=0.0;		Tbl(2,2)=cosb;		Tbl(2,3)=-0.1105;
+	Tbl(2,0)=-sinb;		Tbl(2,1)=0.0;		Tbl(2,2)=cosb;		Tbl(2,3)=-0.062;//Tbl(2,3)=-0.1105;
 	Tbl(3,0)=0.0;		Tbl(3,1)=0.0;		Tbl(3,2)=0.0;		Tbl(3,3)=1.0;
 }
 
@@ -150,12 +149,12 @@ void CameraPos_CallBack(camera_control::CameraPos msg)
 		recent_target_time =ros::Time::now().toSec(); 
 		static int int_valid_25_cnt=0;
 		if(int_valid_25_cnt<100)int_valid_25_cnt++;
-		if(int_valid_25_cnt>3)current_interest_id=25;
+		if(int_valid_25_cnt>3)current_interest_id=25;//看到3次
 		is_valid_track_target=true;
 		target_detector(msg.pose);
 		printf("---\nid:%d\nx:%lf \ny:%lf\nz:%lf\n",msg.id,msg.pose.pose.position.x,msg.pose.pose.position.y,msg.pose.pose.position.z);
 	}
-
+	// id = 35
 	tag_watch_dog=0;
 	TagLost_msg.request.is_lost=0;
 	tag_center_x=msg.cx;
@@ -181,9 +180,9 @@ void init_Tlc(void)
 {
 	//Tlc init
 	Tlc=MatrixXd::Zero(4,4);Tlc(3,3)=1.0;
-	Quaterniond qlc(-0.484592,0.533285,-0.517225,0.461797);//w x y z but cout<<qld.coffes()  is  x y z w.
+	Quaterniond qlc(-0.5,0.5,-0.5,0.5);//Quaterniond qlc(-0.484592,0.533285,-0.517225,0.461797);//w x y z but cout<<qld.coffes()  is  x y z w.
 	Matrix3d Rlc = qlc.toRotationMatrix(); // convert a quaternion to a 3x3 rotation matrix
-	Vector3d Olc(0.0394777,-0.00845416,0.0742496);
+	Vector3d Olc(0.038,0.0,0.0);
 	Tlc<<Rlc;Tlc.col(3)<<Olc;
 }
 
@@ -191,7 +190,7 @@ void init_Tmb(void)
 {
 	//Tmb init
 	Tmb=MatrixXd::Zero(4,4);Tmb(3,3)=1.0;
-	Tmb(0,0)=1.0;		Tmb(0,1)=0.0;		Tmb(0,2)=0.0;		Tmb(0,3)=0.04;	//从manipulator到body
+	Tmb(0,0)=1.0;		Tmb(0,1)=0.0;		Tmb(0,2)=0.0;		Tmb(0,3)=0.0; //Tmb(0,3)=0.04;	//从manipulator到body
 	Tmb(1,0)=0.0;		Tmb(1,1)=0.0;		Tmb(1,2)=1.0;		Tmb(1,3)=0.24;
 	Tmb(2,0)=0.0;		Tmb(2,1)=-1.0;		Tmb(2,2)=0.0;		Tmb(2,3)=0.0;
 	Tmb(3,0)=0.0;		Tmb(3,1)=0.0;		Tmb(3,2)=0.0;		Tmb(3,3)=1.0;
@@ -228,10 +227,11 @@ int main(int argc, char** argv)
 	ros::ServiceClient tag_lost_puber=n.serviceClient<camera_control::TagLost>("/TagLost");
 
 	ros::ServiceClient servoseter = n.serviceClient<am_controller::servoset_srv>("/am_controller/servoset_srv");
+	ros::Subscriber local_pose_suber=n.subscribe("/mavros/vision_pose/pose",1,Local_pose_CallBack);///mavros/vision_pose/pose
 
 
 	/*#ifdef DATA_RECORD
-		ros::Subscriber local_pose_suber=n.subscribe("/mavros/vision_pose/pose",1,Local_pose_CallBack);///mavros/vision_pose/pose
+		
 		state_file_recorder.open("/home/flx/catkin_al/visual_test.txt",ios::out|ios::trunc);
 		if(state_file_recorder==NULL)ROS_INFO("NULL FILE PTR");
 	#endif
@@ -261,6 +261,10 @@ int main(int argc, char** argv)
 	while(ros::ok())
 	{
 		
+		/*int dpose;
+		cin>>dpose;
+		double pose= (145.16-dpose)/0.967742;
+		Set_Servo_Pos(pose);*/
 		if(is_valid_track_target)
 			limited_grasp_call(servoseter,servoset_srv_msg);
 
@@ -275,6 +279,7 @@ int main(int argc, char** argv)
 
 			if(TagLost_msg.request.is_lost==0)
 			{
+				//丢失标志为位 置1
 				TagLost_msg.request.is_lost=1;
 				//tag_lost_puber.call(TagLost_msg);
 				last_pose=150.0;

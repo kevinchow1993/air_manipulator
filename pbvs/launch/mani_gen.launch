@@ -1,0 +1,9 @@
+<launch>
+ 
+  <node  pkg="pbvs" type="mani_tra_gen_sub" name="mani_tri_gen_sub" output="screen">
+  <rosparam file="$(find pbvs)/cfg/para.yaml" command="load" />
+  </node>
+
+
+
+</launch>

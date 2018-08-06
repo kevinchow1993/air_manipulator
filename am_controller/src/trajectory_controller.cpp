@@ -40,7 +40,7 @@ void trajectory_controller::init_Tmb()
 {
   //Tmb init
   Tmb=MatrixXd::Zero(4,4);Tmb(3,3)=1.0;
-  Tmb(0,0)=1.0;   Tmb(0,1)=0.0;   Tmb(0,2)=0.0;   Tmb(0,3)=0.07;  //从manipulator到body   0.04
+  Tmb(0,0)=1.0;   Tmb(0,1)=0.0;   Tmb(0,2)=0.0;   Tmb(0,3)=0.0;  //从manipulator到body   0.04
   Tmb(1,0)=0.0;   Tmb(1,1)=0.0;   Tmb(1,2)=1.0;   Tmb(1,3)=0.24;
   Tmb(2,0)=0.0;   Tmb(2,1)=-1.0;    Tmb(2,2)=0.0;   Tmb(2,3)=0.0;
   Tmb(3,0)=0.0;   Tmb(3,1)=0.0;   Tmb(3,2)=0.0;   Tmb(3,3)=1.0;

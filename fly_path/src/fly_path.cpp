@@ -17,6 +17,11 @@
 
 using namespace std;
 
+
+/**
+算法流程：根据最新接收到的路径点向量集，根据无人机位置反馈，
+判断无人机当前离路径点中最近的下一个点，调用mavros的set_point飞向此点。 **/
+
 class Flx_Path_wapper
 {
 	public:
@@ -63,7 +68,7 @@ class Flx_Path_wapper
 		for (int i = 0; i < msg.poses.size(); ++i)current_path.poses.push_back(msg.poses[i]);
 		
 	}
-	
+	//判断是否到达当前目标点
 	int  is_meet_current_destination(void)
 	{
 	        double pose_err_x =fabs(current_pose.pose.position.x-path_in_use.poses[path_pointer].pose.position.x);
@@ -73,6 +78,7 @@ class Flx_Path_wapper
 	        if (distance_err<0.15)return 1;
 	        else return 0;
 	}
+	//计算下一个目标点
 	void compute_current_destination(void)
 	{
 		if (path_in_use.poses.size()==0)//#first time to get taget
@@ -91,7 +97,7 @@ class Flx_Path_wapper
 		if  (path_pointer+1<path_in_use.poses.size())path_pointer+=is_meet_current_destination();
 		if (path_in_use.poses.size())current_destination_pose.pose=path_in_use.poses[path_pointer].pose;
 	}
-
+//计算当前点和规划好的轨迹中哪一点最近
 	int get_point_in_path(void)
 	{
 		vector<double> err_list;
@@ -106,6 +112,7 @@ class Flx_Path_wapper
 		auto smallest=min_element(begin(err_list), end(err_list));
 		return distance(begin(err_list), smallest);
 	}
+	//强制插补
 	void Limit_destination_movement(double max_limit)
 	{
 		
@@ -142,6 +149,7 @@ void PoseStamped_Callback(const geometry_msgs::PoseStampedConstPtr &msg)
 void Path_Callback(nav_msgs::Path msg)
 {
 	 Path_handler.reload_path(msg);
+	 ROS_INFO("RECEIVED A NEW PATH!");
 }
 
 
@@ -160,9 +168,11 @@ int main(int argc, char* argv[])
   	ros::Rate loop_rate(50);
   	while (ros::ok())
 	{
+		//等待有效轨迹
 		if (Path_handler.start_locker<100||Path_handler.current_path.poses.size()==0)ROS_INFO("wait for valid path");
 		else
 		{
+			//计算下一个目标点
 			Path_handler.compute_current_destination();
 			Path_handler.current_destination_pose.header.stamp = ros::Time::now();
 			Path_handler.current_destination_pose.header.frame_id = "fcu";
@@ -174,6 +184,7 @@ int main(int argc, char* argv[])
 		        	Path_handler.Limit_destination_movement(0.2);
 		        	
 		        	double Zp=3.0,Zp_plus=0;
+					//强制拔高
 		        	if(Path_handler.current_destination_pose.pose.position.z>Path_handler.current_pose.pose.position.z)
 		        	{
 		        		Zp_plus=Zp*(Path_handler.current_destination_pose.pose.position.z-Path_handler.current_pose.pose.position.z);

@@ -8,6 +8,7 @@
       {id: 35, size: 0.12000,frame_id: marker1}]
     </rosparam>
   </node>
+  <node pkg="tf" type="static_transform_publisher" name="hand_camera_broadcaster" args="0.038 0 0 -0.5 0.5 -0.5 0.5 end_effector camera_link 100" />
 
   <node ns="camera" pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera" output="screen">
     <param name="width" type="int" value="640" />
