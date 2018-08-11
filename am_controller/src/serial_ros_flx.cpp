@@ -221,9 +221,9 @@ void set_kinpos_t(double joint_pos1,double joint_pos2,double joint_pos3,double j
 	target_y = res_se(1,3);
 
 	double servo_pos1=5.0-joint_pos1;
-	double servo_pos2=1.2*joint_pos2-25.0;
+	double servo_pos2=1.2*joint_pos2-21.0;//25
 	//double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+207;
-	double servo_pos3=-1.1*joint_pos2 -0.6444*joint_pos3+212;
+	double servo_pos3=-1.1*joint_pos2 -0.6444*joint_pos3+207;
 	double servo_pos4=joint_pos4+22;
 
 	printf("set pos:%lf   %lf   %lf    %lf  atime:%d\n",servo_pos1,servo_pos2,servo_pos3,servo_pos4,action_time );
@@ -387,7 +387,7 @@ bool pos_serv_CallBack(am_controller::servoset_srv::Request &msg,am_controller::
 			res.is_done=1;
 			break;
 		case 4:
-		 	//10 du for grasp      60  for loose
+		 	//20 du for grasp      70  for loose
 			printf("try grasp action\n" );
 			grasp_action(msg.pos1,msg.action_time );
 			res.is_done=1;
@@ -436,14 +436,15 @@ int main(int argc, char** argv)
 		state_file_recorder.open("/home/flx/catkin_al/state_recorder.txt",ios::out|ios::trunc);
 		if(state_file_recorder==NULL)ROS_INFO("NULL FILE PTR");		
 	#endif*/
-
-	ros::Timer timer = n.createTimer(ros::Duration(0.002), timerCallback);
+	
+	ros::Timer timer = n.createTimer(ros::Duration(0.002), timerCallback);//没有用到
 	ros::ServiceServer pos_service = n.advertiseService("/am_controller/servoset_srv", pos_serv_CallBack);
 
 	ros::Duration(2.0).sleep();	
 	set_kinpos_t(-10,170,-70,0,3000);
-	grasp_action(60,200);
-	ros::MultiThreadedSpinner s(4);
+	grasp_action(70,200);
+	ros::MultiThreadedSpinner s(4);//没有用到
+
   	ros::spin(s);
 
 	// ros::Rate loop_rate(1000);

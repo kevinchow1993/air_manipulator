@@ -1,0 +1,16 @@
+digraph G {
+"world" -> "target"[label="Broadcaster: /dynamic_grasp\nAverage rate: 85.440 Hz\nMost recent transform: 1533801415.333 ( 0.011 sec old)\nBuffer length: 4.963 sec\n"];
+"world" -> "body"[label="Broadcaster: /dynamic_grasp\nAverage rate: 89.382 Hz\nMost recent transform: 1533801415.333 ( 0.011 sec old)\nBuffer length: 4.956 sec\n"];
+"world" -> "optitracker"[label="Broadcaster: /vrpn_client_node\nAverage rate: 120.387 Hz\nMost recent transform: 1533801415.379 ( -0.035 sec old)\nBuffer length: 3.929 sec\n"];
+"world" -> "three"[label="Broadcaster: /vrpn_client_node\nAverage rate: 120.387 Hz\nMost recent transform: 1533801415.379 ( -0.035 sec old)\nBuffer length: 3.929 sec\n"];
+"body" -> "grasp_target"[label="Broadcaster: /target_path_track\nAverage rate: 41.809 Hz\nMost recent transform: 1533801415.281 ( 0.063 sec old)\nBuffer length: 3.827 sec\n"];
+"camera" -> "target1"[label="Broadcaster: /apriltag_detector\nAverage rate: 41.797 Hz\nMost recent transform: 1533801415.240 ( 0.104 sec old)\nBuffer length: 3.828 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1533801415.344"[ shape=plaintext ] ;
+ }->"world";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1533801415.344"[ shape=plaintext ] ;
+ }->"camera";
+}

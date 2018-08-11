@@ -67,6 +67,14 @@ void init_grasp(ros::ServiceClient &servoseter){
 	msg.request.pos4=0;
 	msg.request.action_time=2000;
 	servoseter.call(msg);
+
+
+	msg.request.cmd=4;
+	msg.request.pos1=60;
+
+	msg.request.action_time=1000;
+	servoseter.call(msg);
+
 	
 
 }
@@ -75,7 +83,8 @@ void grasp(ros::ServiceClient &servoseter){
 
 	am_controller::servoset_srv msg;
 	msg.request.cmd=4;
-	msg.request.action_time=2;
+	msg.request.pos1=10;
+	msg.request.action_time=100;
 	servoseter.call(msg);
 }
 
