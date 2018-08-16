@@ -223,7 +223,7 @@ void set_kinpos_t(double joint_pos1,double joint_pos2,double joint_pos3,double j
 	double servo_pos1=5.0-joint_pos1;
 	double servo_pos2=1.2*joint_pos2-21.0;//25
 	//double servo_pos3=-1.1*joint_pos2 -0.64444*joint_pos3+207;
-	double servo_pos3=-1.1*joint_pos2 -0.6444*joint_pos3+207;
+	double servo_pos3=-1.1*joint_pos2 -0.6444*joint_pos3+197;
 	double servo_pos4=joint_pos4+22;
 
 	printf("set pos:%lf   %lf   %lf    %lf  atime:%d\n",servo_pos1,servo_pos2,servo_pos3,servo_pos4,action_time );
