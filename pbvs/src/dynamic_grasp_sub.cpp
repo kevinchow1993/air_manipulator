@@ -53,7 +53,7 @@ Eigen::Isometry3d T_eft_lasttime;
 Eigen::Vector3d temp_target;
 //tf::TransformBroadcaster br;
 
-
+Eigen::Vector2d set_point(0.22,-0.17);
 //double i=0.1;
 //geometry_msgs::PoseStamped poseStamped,grasp_poseStamped;
 
@@ -73,10 +73,11 @@ public:
 	double set_yaw;
 	Eigen::Isometry3d Twb;
 	visualization_msgs::Marker body;
+	Eigen::Vector3d delta_trans;
 	
 	Mav(){
 		
-
+		delta_trans.setZero();
 		T_mav_last_time.setIdentity();
 		last_time = 0.0;
 		current_yaw = 0.0;
@@ -124,7 +125,8 @@ public:
 	}
 
 	void set_Twb(const geometry_msgs::PoseStampedConstPtr &msg){
-
+		
+		
 		Local_pose.position.x = msg->pose.position.x;
 		Local_pose.position.y = msg->pose.position.y;
 		Local_pose.position.z = msg->pose.position.z;
@@ -167,7 +169,32 @@ public:
 		cout<<"--yaw--"<<current_yaw*180.0/pi<< endl;
 		cout<<"--Twb--"<<endl;;
 		cout<<Twb.matrix()<<endl;
+		cout<<"--delta_trans--"<<endl;
+		cout<<delta_trans<<endl;
 
+
+	}
+
+	//TODO: 低通滤波
+	void compute_translation(){
+		static bool flag = 0;
+		static Eigen::Vector3d last_position ;
+		if(!flag){
+			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.y);
+			last_position = now_positin;
+			ROS_ERROR("last_posiont:%f,%f,%f",&last_position(0),&last_position(1),&last_position(2));
+			if(now_positin(0)){
+				flag = 1;}
+
+		}else{
+			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.y);
+			delta_trans = now_positin - last_position;
+			last_position = now_positin;
+
+		}
+		
+		
+	
 
 	}
 	
@@ -259,11 +286,13 @@ public:
 		cout<<"--Body Frame--"<<endl;
 		cout<<"x:"<<Posi_m.x<<"y:"<<Posi_m.y<<"z:"<<Posi_m.z<<endl;
 
+
 	}
 	void sendTransformTarget(){
 		static tf::TransformBroadcaster Tar_br;
 		tf::Transform transform;
 		tf::transformEigenToTF(Twa,transform);
+
 		
 		Tar_br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "/world", "/target"));
 		
@@ -289,19 +318,26 @@ void init_Tmb(void)
 
 void call_servo(Eigen::Vector3d &p){
 
+	Eigen::Vector2d tar_point;
+	set_point(0)=set_point(0) - p(2);
+	set_point(1)= set_point(1) - p(0);
+
 	servoset_srv_msg.request.cmd=6;
 	servoset_srv_msg.request.pos1=0;
 	servoset_srv_msg.request.pos2=0;
-	servoset_srv_msg.request.pos3=p(0);
-	servoset_srv_msg.request.pos4=p(1);
-	servoset_srv_msg.request.action_time=500;
+	servoset_srv_msg.request.pos3=set_point(0);
+	servoset_srv_msg.request.pos4=set_point(1);
+	servoset_srv_msg.request.action_time=200;
+	cout<<"delta_trans\n"<<mav.delta_trans<<endl;
+	cout<<"set_point \n"<<set_point<<endl;
+
 }
 
 // 获得delat_t矩阵 
 void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
 
 {
-	cout<<"enter target!"<<endl;
+	//cout<<"enter target!"<<endl;
 	Eigen::Isometry3d Delta_T;
 	geometry_msgs::Pose mav_pose=mav.Local_pose;
 	Eigen::Isometry3d T_mav_thistime;
@@ -328,9 +364,11 @@ void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
 
 	target.pub_marker(marker_pub);
 	target.sendTransformTarget();
-	target.display();
-	cout.precision(3);
-	cout<<"Tmax:"<<Tma(0,3)<<"Tmay:"<<Tma(1,3)<<"Tmaz:"<<Tma(2,3)<<endl;
+	//mav.compute_translation();
+	//target.display();
+	//cout.precision(3);
+	//cout<<"Tmax:"<<Tma(0,3)<<"Tmay:"<<Tma(1,3)<<"Tmaz:"<<Tma(2,3)<<endl;
+//	cout<<"Delta_T is"<<"\n"<<Delta_T.matrix()<<endl;
 	//Twa = mav.Twb*Tbar;
 	/*
 	target.position.x=Tma(0,3);
@@ -387,12 +425,18 @@ void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg){
 	mav.set_Twb(msg);
 	mav.sendTransformTwb();
 	mav.pub_mavmarker(body_pub);
-	mav.display();
+	//mav.display();
 
 
 
 }
+void timerCallback(const ros::TimerEvent&){
+	cout<<"enter timer"<<endl;
+	mav.compute_translation();
+	call_servo(mav.delta_trans);
+	servoseter.call(servoset_srv_msg);
 
+}
 int main(int argc, char *argv[])
 {
 	ros::init(argc, argv, "dynamic_grasp");
@@ -412,6 +456,14 @@ int main(int argc, char *argv[])
  	//fabu 
 
 	servoseter = n.serviceClient<am_controller::servoset_srv>("/am_controller/servoset_srv");
+	ros::Timer timer = n.createTimer(ros::Duration(0.1), timerCallback);
+	servoset_srv_msg.request.cmd=6;
+	servoset_srv_msg.request.pos1=0;
+	servoset_srv_msg.request.pos2=0;
+	servoset_srv_msg.request.pos3=set_point(0);
+	servoset_srv_msg.request.pos4=set_point(1);
+	servoset_srv_msg.request.action_time=2000;
+	servoseter.call(servoset_srv_msg);
 
 
 

@@ -23,7 +23,6 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   apriltags
   image_transport
-
   tf_conversions
   eigen_conversions
   kdl_conversions

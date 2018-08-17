@@ -1,0 +1,8 @@
+{
+    "cmake.configureOnOpen": false,
+    "ros.distro": "kinetic",
+    "python.autoComplete.extraPaths": [
+        "/home/kevin/caktin_ware/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ]
+}

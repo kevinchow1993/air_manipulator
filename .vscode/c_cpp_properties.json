@@ -1,0 +1,35 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/kevin/caktin_ware/devel/include",
+                "/opt/ros/kinetic/include",
+                "/home/kevin/caktin_ware/src/am_controller/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/apriltags_ros/apriltags/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/apriltags_ros/apriltags_ros/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/apriltags_ros/ethz_apriltag2/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/camera_control/include",
+                "/home/kevin/caktin_ware/src/qfy-fflocking_algo-b3ce057dcc8d/include",
+                "/home/kevin/caktin_ware/src/hand_eye_calibrate/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/camera_umd/jpeg_streamer/include",
+                "/home/kevin/caktin_ware/src/mavros_msgs/include",
+                "/home/kevin/caktin_ware/src/path_planning/include",
+                "/home/kevin/caktin_ware/src/pbvs/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/uvc_test_main/include",
+                "/home/kevin/caktin_ware/src/monocular_servo/hitsz_apriltags_ros/camera_umd/uvc_camera/include",
+                "/home/kevin/caktin_ware/src/vrpn_client_ros-indigo-devel/include",
+                "/usr/include"
+            ],
+            "name": "Linux",
+            "intelliSenseMode": "clang-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
