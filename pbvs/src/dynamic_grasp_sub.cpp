@@ -29,6 +29,7 @@
 #include <camera_control/ServoPos.h>
 #include <camera_control/CameraPos.h>
 #include <camera_control/TagLost.h>
+#include <queue>
 
 #include "Eigen/Eigen"
 #include <cmath>
@@ -124,6 +125,7 @@ public:
 			return dist;
 	}
 
+	
 	void set_Twb(const geometry_msgs::PoseStampedConstPtr &msg){
 		
 		
@@ -176,22 +178,31 @@ public:
 	}
 
 	//TODO: 低通滤波
-	void compute_translation(){
+	Eigen::Vector2d compute_translation(){
 		static bool flag = 0;
 		static Eigen::Vector3d last_position ;
+		Eigen::Vector2d res(0,0);
 		if(!flag){
-			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.y);
+			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.z);
 			last_position = now_positin;
 			ROS_ERROR("last_posiont:%f,%f,%f",&last_position(0),&last_position(1),&last_position(2));
 			if(now_positin(0)){
 				flag = 1;}
 
 		}else{
-			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.y);
+			Eigen::Vector3d now_positin(Local_pose.position.x,Local_pose.position.y,Local_pose.position.z);
 			delta_trans = now_positin - last_position;
 			last_position = now_positin;
 
 		}
+		//res(0)= 0.0;
+		res(0) = delta_trans(0)/cos(current_yaw);
+		//res(0) = sqrt(delta_trans(0)*delta_trans(0)+delta_trans(1)*delta_trans(1));
+		res(1) = delta_trans(2);
+		cout<<"res:\n"<<res<<endl;
+		//cout<<"current yaw\n"<<cos(current_yaw)<<endl;
+	//	res(2) = delta_trans(2); 
+		return res;
 		
 		
 	
@@ -212,6 +223,7 @@ public:
 	bool Delta_T_is_ok;
 	Eigen::Isometry3d Twa;
 	Eigen::Isometry3d Tba;
+	queue<Eigen::Vector2d> q_compansate;
 	//Eigen::Quaterniond tar_q;
 
 	Target(){
@@ -316,11 +328,11 @@ void init_Tmb(void)
 	Tmb(3,0)=0.0;		Tmb(3,1)=0.0;		Tmb(3,2)=0.0;		Tmb(3,3)=1.0;
 }
 
-void call_servo(Eigen::Vector3d &p){
+void call_servo(Eigen::Vector2d &setpoint,Eigen::Vector2d delta){
 
-	Eigen::Vector2d tar_point;
-	set_point(0)=set_point(0) - p(2);
-	set_point(1)= set_point(1) - p(0);
+	
+	set_point(0) = set_point(0)  - delta(0);
+	set_point(1) = set_point(1) -  delta(1);
 
 	servoset_srv_msg.request.cmd=6;
 	servoset_srv_msg.request.pos1=0;
@@ -328,7 +340,7 @@ void call_servo(Eigen::Vector3d &p){
 	servoset_srv_msg.request.pos3=set_point(0);
 	servoset_srv_msg.request.pos4=set_point(1);
 	servoset_srv_msg.request.action_time=200;
-	cout<<"delta_trans\n"<<mav.delta_trans<<endl;
+	//cout<<"delta_trans\n"<<mav.delta_trans<<endl;
 	cout<<"set_point \n"<<set_point<<endl;
 
 }
@@ -432,8 +444,14 @@ void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg){
 }
 void timerCallback(const ros::TimerEvent&){
 	cout<<"enter timer"<<endl;
-	mav.compute_translation();
-	call_servo(mav.delta_trans);
+	
+
+	target.q_compansate.push(mav.compute_translation());
+	call_servo(set_point,target.q_compansate.front());
+	//call_servo(set_point,mav.compute_translation());
+	target.q_compansate.pop();
+
+
 	servoseter.call(servoset_srv_msg);
 
 }
