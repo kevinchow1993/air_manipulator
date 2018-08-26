@@ -29,6 +29,7 @@
 #include <camera_control/ServoPos.h>
 #include <camera_control/CameraPos.h>
 #include <camera_control/TagLost.h>
+#include <queue>
 
 #include "Eigen/Eigen"
 #include <cmath>
@@ -42,6 +43,8 @@ using namespace std;
 camera_control::TagLost TagLost_msg;
 am_controller::servoset_srv servoset_srv_msg;
 nav_msgs::Path path_msg,grasp_msg_path;
+Eigen::Vector2d grasp_point_eigen;
+
 //nav_msgs::Path grasp_path_msg;
 ros::Publisher grasp_path_pub;
 ros::Publisher path_pub;
@@ -49,8 +52,11 @@ ros::Publisher marker_pub;
 ros::Publisher endeft_pub;
 ros::Publisher base_pub;
 ros::ServiceClient servoseter;
-double first,second;
+double first= 0.1,second=0.01;
 double i=0.1;
+
+queue<Eigen::Vector2d> grasp_path_queue;
+
 //geometry_msgs::PoseStamped poseStamped,grasp_poseStamped;
 
 
@@ -117,18 +123,56 @@ void limited_grasp_call(ros::ServiceClient &servoseter,am_controller::servoset_s
 void grasp_path_track(ros::ServiceClient &servoseter,nav_msgs::Path &path){
 	int pointer=0;
 	am_controller::servoset_srv servoset_srv_msg;
-	for(pointer=0;pointer<path.poses.size();pointer++){
-		ros::Duration(0.08).sleep();
+	// for(pointer=0;pointer<path.poses.size();pointer++){
+	// 	ros::Duration(0.08).sleep();
 
+	// 	servoset_srv_msg.request.cmd=6;
+	// 	servoset_srv_msg.request.pos1=0;
+	// 	servoset_srv_msg.request.pos2=0;
+	// 	servoset_srv_msg.request.pos3=path.poses[pointer].pose.position.x;
+	// 	servoset_srv_msg.request.pos4=path.poses[pointer].pose.position.y;
+	// 	servoset_srv_msg.request.action_time=80;
+	// 	servoseter.call(servoset_srv_msg);
+	// 	if(servoset_srv_msg.response.is_done == 0){
+	// 		ROS_ERROR("BAD x=%f,y=%f",path.poses[pointer].pose.position.x,path.poses[pointer].pose.position.y);
+	// 	}
+	// 	visualization_msgs::Marker endef;
+	// 	endef.header.frame_id="/body";
+	// 	endef.header.stamp = ros::Time::now();
+	// 	endef.id = 0;
+	// 	endef.ns = "basic_shapes";
+	// 	endef.type = visualization_msgs::Marker::ARROW;
+	// 	endef.pose.position.x = path.poses[pointer].pose.position.x;
+	// 	endef.pose.position.y = path.poses[pointer].pose.position.y;
+	// 	endef.pose.position.z = 0;
+	// 	endef.pose.orientation.x= 0;
+	// 	endef.pose.orientation.y = 0;
+	// 	endef.pose.orientation.z = 0;
+	// 	endef.pose.orientation.w = 1;
+	// 	endef.scale.x = 0.01;
+	// 	endef.scale.y=0.01;
+	// 	endef.scale.z = 0.01;
+	// 	endef.color.r = 1.0f;
+	// 	endef.color.g = 0.0f;
+	// 	endef.color.b = 0.0f;
+	// 	endef.color.a = 1.0;
+	// 	endef.lifetime = ros::Duration();
+	// 	endeft_pub.publish(endef);
+	// }
+
+   while(!grasp_path_queue.empty()){
+		ros::Duration(0.08).sleep();
+		Eigen::Vector2d eigen_vector;
+		eigen_vector = grasp_path_queue.front();
 		servoset_srv_msg.request.cmd=6;
 		servoset_srv_msg.request.pos1=0;
 		servoset_srv_msg.request.pos2=0;
-		servoset_srv_msg.request.pos3=path.poses[pointer].pose.position.x;
-		servoset_srv_msg.request.pos4=path.poses[pointer].pose.position.y;
+		servoset_srv_msg.request.pos3=eigen_vector(0);
+		servoset_srv_msg.request.pos4=eigen_vector(1);
 		servoset_srv_msg.request.action_time=80;
 		servoseter.call(servoset_srv_msg);
 		if(servoset_srv_msg.response.is_done == 0){
-			ROS_ERROR("BAD x=%f,y=%f",path.poses[pointer].pose.position.x,path.poses[pointer].pose.position.y);
+			ROS_ERROR("BAD x=%f,y=%f",eigen_vector(0),eigen_vector(1));
 		}
 		visualization_msgs::Marker endef;
 		endef.header.frame_id="/body";
@@ -136,8 +180,8 @@ void grasp_path_track(ros::ServiceClient &servoseter,nav_msgs::Path &path){
 		endef.id = 0;
 		endef.ns = "basic_shapes";
 		endef.type = visualization_msgs::Marker::ARROW;
-		endef.pose.position.x = path.poses[pointer].pose.position.x;
-		endef.pose.position.y = path.poses[pointer].pose.position.y;
+		endef.pose.position.x = eigen_vector(0);
+		endef.pose.position.y = eigen_vector(1);
 		endef.pose.position.z = 0;
 		endef.pose.orientation.x= 0;
 		endef.pose.orientation.y = 0;
@@ -152,6 +196,7 @@ void grasp_path_track(ros::ServiceClient &servoseter,nav_msgs::Path &path){
 		endef.color.a = 1.0;
 		endef.lifetime = ros::Duration();
 		endeft_pub.publish(endef);
+		grasp_path_queue.pop();
 	}
 }
 
@@ -246,7 +291,9 @@ public:
 				msg_path.header.frame_id = "world";
 				poseStampeds.header.frame_id = "world";
 				poseStampeds.pose  = poses;
+
 				msg_path.poses.push_back(poseStampeds);
+
 				path_pub.publish(msg_path);
 
 				for (int i=0;i<4;++i)
@@ -287,7 +334,10 @@ public:
 			geometry_msgs::Pose poses;
 			geometry_msgs::PoseStamped poseStampeds;
 			double dt=0.05;
+			queue<Eigen::Vector2d> empty;
+			swap(grasp_path_queue,empty);
 			grasp_traj.poses.clear();
+
 
 			for (double t=0.0; t <= traject->Duration(); t+= dt) {
 				Frame current_pose;
@@ -297,9 +347,11 @@ public:
 				poseStampeds.header.frame_id = "body";
 				poseStampeds.pose  = poses;
 				grasp_traj.poses.push_back(poseStampeds);
+				grasp_point_eigen<<poses.position.x,poses.position.y;
+				grasp_path_queue.push(grasp_point_eigen);
 			}
 			duration= ros::Time::now().toSec()-start;
-			ROS_INFO("grasp_trij size is:%d---use%f sec",grasp_msg_path.poses.size(),duration);
+			ROS_INFO("grasp_trij size is:%d eigensize:%d---use%f sec",grasp_msg_path.poses.size(),grasp_path_queue.size(),duration);
 		}catch(Error& error) {
 			std::cout <<"I encountered this error : " << error.Description() << std::endl;
 			std::cout << "with the following type " << error.GetType() << std::endl;
