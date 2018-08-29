@@ -17,7 +17,7 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
-#include <am_controller/Mat_Tba.h>
+#include <am_controller/Mat_Tba.h> 
 #include <eigen_conversions/eigen_msg.h>
 #include <tf_conversions/tf_eigen.h>
 #include <tf/transform_broadcaster.h>
@@ -54,7 +54,7 @@ Eigen::Isometry3d T_eft_lasttime;
 Eigen::Vector3d temp_target;
 //tf::TransformBroadcaster br;
 
-//Eigen::Vector2d set_point(0.22,-0.17);
+Eigen::Vector2d set_point(0.22,-0.17);
 //double i=0.1;
 //geometry_msgs::PoseStamped poseStamped,grasp_poseStamped;
 
@@ -75,6 +75,7 @@ public:
 	Eigen::Isometry3d Twb;
 	visualization_msgs::Marker body;
 	Eigen::Vector3d delta_trans;
+
 	
 	Mav(){
 		
@@ -222,13 +223,14 @@ public:
 	double last_time;
 	bool Delta_T_is_ok;
 	bool path_is_ok=0; 			
-	bool grasp_is_done =0;		//判断有没有生成轨迹
+	bool grasp_is_done =0;				//判断有没有生成轨迹
 	Eigen::Isometry3d Twa;				//世界坐标系到目标物的变换矩阵	
 	Eigen::Isometry3d Tba;				//机体坐标系到目标物的变换矩阵	
 	queue<Eigen::Vector2d> q_compansate; //动态补偿队列
 	//Eigen::Quaterniond tar_q;
 	nav_msgs::Path grasp_traj;			//机械臂轨迹for visual
 	queue<Eigen::Vector2d> grasp_path;	//机械臂轨迹for track
+	
 
 	Target(){
 		valid_target_cnt = 0;
@@ -444,7 +446,7 @@ void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
 	//target.display();
 	//cout.precision(3);
 	//cout<<"Tmax:"<<Tma(0,3)<<"Tmay:"<<Tma(1,3)<<"Tmaz:"<<Tma(2,3)<<endl;
-//	cout<<"Delta_T is"<<"\n"<<Delta_T.matrix()<<endl;
+	//cout<<"Delta_T is"<<"\n"<<Delta_T.matrix()<<endl;
 	//Twa = mav.Twb*Tbar;
 	/*
 	target.position.x=Tma(0,3);
@@ -510,44 +512,52 @@ void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg){
 void call_servo(Eigen::Vector2d &setpoint,Eigen::Vector2d delta){
 
 	
-	setpoint(0) = setpoint(0)  - delta(0);
-	setpoint(1) = setpoint(1) -  delta(1);
+	Eigen::Vector2d actual_point;
+	actual_point(0) = setpoint(0)  - delta(0);
+	actual_point(1) = setpoint(1) -  delta(1);
 
 	servoset_srv_msg.request.cmd=6;
 	servoset_srv_msg.request.pos1=0;
 	servoset_srv_msg.request.pos2=0;
-	servoset_srv_msg.request.pos3=setpoint(0);
-	servoset_srv_msg.request.pos4=setpoint(1);
+	servoset_srv_msg.request.pos3=actual_point(0);
+	servoset_srv_msg.request.pos4=actual_point(1);
 	servoset_srv_msg.request.action_time=100;
 	//cout<<"delta_trans\n"<<mav.delta_trans<<endl;
-	cout<<"set_point \n"<<setpoint<<endl;
+	cout<<"set_point:\t"<<setpoint(0)<<setpoint(1)<<endl;
+	cout<<"actual point\t"<<actual_point(0)<<actual_point(1)<<endl;
 
 }
 
 void timerCallback(const ros::TimerEvent&){
-	cout<<"enter timer"<<"---"<<"path is OK"<<target.path_is_ok<<endl;
-	
-	if(target.path_is_ok){
-		if(!target.grasp_path.empty()){
-			cout<<"grasp_path size is"<<target.grasp_path.size()<<endl;
-			
-			target.q_compansate.push(mav.compute_translation());
-			call_servo(target.grasp_path.front(),target.q_compansate.front());
-			target.q_compansate.pop();
-			target.grasp_path.pop();
-			servoseter.call(servoset_srv_msg);}
-		else if(!target.grasp_is_done){
-			target.grasp(servoseter);
-			ros::Duration(0.5).sleep();
-			target.rise(servoseter);
-		}
 
-		
 
-	}
-	else{
-		target.generate_grasp_trajectory();
-	}
+	//cout<<"enter timer"<<"---"<<"path is OK"<<target.path_is_ok<<endl;
+	Eigen::Vector2d tar_point;
+	    tar_point<<target.Posi_m.x,target.Posi_m.y;
+		target.q_compansate.push(mav.compute_translation());
+		call_servo(set_point,target.q_compansate.front());
+
+
+	// if(target.path_is_ok){
+	// 	if(target.grasp_path.size()>5){
+	// 		cout<<"grasp_path size is   "<<target.grasp_path.size()<<endl;
+
+	// 		target.q_compansate.push(mav.compute_translation());
+	// 		call_servo(target.grasp_path.front(),target.q_compansate.front());
+	// 		target.q_compansate.pop();
+	// 		target.grasp_path.pop();
+	// 		servoseter.call(servoset_srv_msg);}
+	// 	else if(!target.grasp_is_done){
+	// 		target.grasp(servoseter);
+	// 		ros::Duration(0.5).sleep();
+	// 		target.rise(servoseter);
+	// 		target.grasp_is_done = true;
+	// 	}
+
+	// }
+	// else{
+	// 	target.generate_grasp_trajectory();
+	// }
 
 	
 
@@ -600,7 +610,7 @@ int main(int argc, char *argv[])
 	servoseter = n.serviceClient<am_controller::servoset_srv>("/am_controller/servoset_srv");
 	ros::Timer timer = n.createTimer(ros::Duration(0.1), timerCallback);
 	init_grasp(servoseter);
-
+	
 
 	ros::spin();
 
