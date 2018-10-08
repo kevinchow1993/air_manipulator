@@ -327,7 +327,7 @@ int main(int argc, char** argv)
 					nav_msgs::Path m_path;
 					generate_path(m_path,marker_wx,marker_wy,marker_wz+0.87,0.18,true,0.0);// 实时在这里把偏航角的信息加进去 offset angle =0
 					if(m_path.poses.size()>0)Path_puber.publish(m_path);//发布轨迹
-					//距离目标物足够近了，转而看小目标物，不看大目标物。
+					//距离目标物足够近了，转而看小目标物，不看大目标物。  
 					if(m_path.poses.size()>0&&m_path.poses.size()<7)//8
 					{
 						along_marker_path=true;

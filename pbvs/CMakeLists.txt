@@ -121,3 +121,11 @@ add_dependencies(dynamic_grasp_sub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_
 target_link_libraries(dynamic_grasp_sub
   ${catkin_LIBRARIES}
 )
+
+add_executable(global_dynamic_grasp_sub
+  src/global_dynamic_grasp_sub.cpp
+)
+add_dependencies(global_dynamic_grasp_sub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(global_dynamic_grasp_sub
+  ${catkin_LIBRARIES}
+)
