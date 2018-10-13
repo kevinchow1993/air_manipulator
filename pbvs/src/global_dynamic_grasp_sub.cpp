@@ -61,11 +61,12 @@ am_controller::servoset_srv servoset_srv_msg;
 //ros::Publisher grasp_path_pub;
 ros::Publisher path_pub;
 ros::Publisher marker_pub;
+ros::Publisher big_marker_pub;
 ros::Publisher endeft_pub;
 ros::Publisher body_pub;
 ros::ServiceClient servoseter;
 double first,second;
-bool trajectory_follow_success;
+bool trajectory_follow_success  = false;
 Eigen::Isometry3d T_eft_lasttime;
 Eigen::Vector3d temp_target;
 //tf::TransformBroadcaster br;
@@ -379,7 +380,8 @@ public:
 	geometry_msgs::Point Posi_w;		//目标物世界坐标	
 	geometry_msgs::Point marker_pos;
 
-	visualization_msgs::Marker visual;
+	visualization_msgs::Marker visual;  //目标物rviz
+	visualization_msgs::Marker bigmarker;
 	geometry_msgs::Vector3 vel;			//目标物移动速度
 	double last_time;
 	bool Delta_T_is_ok;
@@ -401,10 +403,10 @@ public:
 		last_time = 0.0;
 		Delta_T_is_ok = 0;
 		visual.header.frame_id="/world";
-		
+		//target marker
 		visual.id = 0;
 		visual.ns = "basic_shapes";
-		visual.type = visualization_msgs::Marker::CUBE;
+		visual.type = visualization_msgs::Marker::SPHERE;
 		visual.pose.position.x = 0;
 		visual.pose.position.y = 0;
 		visual.pose.position.z = 0;
@@ -420,6 +422,26 @@ public:
 		visual.color.b = 0.0f;
 		visual.color.a = 1.0;
 		visual.lifetime = ros::Duration();
+		//
+		bigmarker.header.frame_id="/world";
+		bigmarker.id = 0;
+		bigmarker.ns = "basic_shapes";
+		bigmarker.type = visualization_msgs::Marker::CUBE;
+		bigmarker.pose.position.x = 0;
+		bigmarker.pose.position.y = 0;
+		bigmarker.pose.position.z = 0;
+		bigmarker.pose.orientation.x= 0;
+		bigmarker.pose.orientation.y = 0;
+		bigmarker.pose.orientation.z = 0;
+		bigmarker.pose.orientation.w = 1;
+		bigmarker.scale.x = 0.2;
+		bigmarker.scale.y=0.2;
+		bigmarker.scale.z = 0.2;
+		bigmarker.color.r = 1.0f;
+		bigmarker.color.g = 0.0f;
+		bigmarker.color.b = 0.0f;
+		bigmarker.color.a = 1.0;
+		bigmarker.lifetime = ros::Duration();
 		ROS_ERROR("****target object has created!!***");
 
 		
@@ -477,6 +499,12 @@ public:
 		marker_pos.x = twa(0,3);
 		marker_pos.y = twa(1,3);
 		marker_pos.z = twa(2,3);
+		bigmarker.header.stamp = ros::Time::now();
+		bigmarker.pose.position.x = marker_pos.x;
+		bigmarker.pose.position.y = marker_pos.y;
+		bigmarker.pose.position.z = marker_pos.z;
+		cout<<"big marker:"<<marker_pos.x<<" "<<marker_pos.y<<" "<<marker_pos.z<<endl;
+
 
 	}
 
@@ -486,9 +514,10 @@ public:
 	 * 
 	 * @param marker_pub 
 	 */
-	void pub_marker(ros::Publisher &marker_pub){
+	void pub_marker(ros::Publisher &marker_pub,visualization_msgs::Marker visual){
 		
 		marker_pub.publish(visual);
+		
 
 	}
 	/**
@@ -650,8 +679,13 @@ void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
 		Delta_T = T_mav_thistime*mav.T_mav_last_time.inverse();
 		mav.T_mav_last_time = T_mav_thistime;}*/
 	
+	static int target_pose_flag;
+	if(target_pose_flag==0){
+		ROS_INFO("Enter target_pose callback!");
+		target_pose_flag = 1;
+	}
 
-	//ROS_INFO("Enter callback!");
+	
 
 	Eigen::Isometry3d Tbar,Tma,Twa;
 	//visualization_msgs::Marker marker;
@@ -664,12 +698,13 @@ void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
 		target.valid_target_cnt++;
 		target.set_Twa(Tbar,mav.Twb);
 
-		target.pub_marker(marker_pub);
+		target.pub_marker(marker_pub,target.visual);
 		target.sendTransformTarget();
 	}
 	else if(Tba_msg->id==35){
 		target.valid_marker_cnt++;
 		target.set_marker_pos(Tbar,mav.Twb);
+		target.pub_marker(big_marker_pub,target.bigmarker);
 
 	}
 
@@ -685,6 +720,11 @@ void target_pose_callback(const am_controller::Mat_Tba::ConstPtr &Tba_msg)
  * @param msg 
  */
 void CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg){
+	static int camera_pose_flag;
+	if(camera_pose_flag ==0){
+		ROS_INFO("Enter camera pose flag");
+		camera_pose_flag = 1;
+	}
 	float yaw_err =msg->cx - 320;
 		
 	 mav.set_yaw = mav.current_yaw -yaw_err*0.004;
@@ -701,6 +741,11 @@ void CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg){
 
 **/
 void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg){
+	static int local_pose_flag;
+	if(local_pose_flag ==0){
+		ROS_INFO("Enter local pose callback");
+		local_pose_flag = 1;
+	}
 	//cout<<"enter mav"<<endl;
 
 	mav.set_Twb(msg);
@@ -732,8 +777,13 @@ void call_servo(Eigen::Vector2d &setpoint,Eigen::Vector2d delta){
 }
 
 void timerCallback(const ros::TimerEvent&){
+	static int time_flag;
+	if(time_flag==0){
+		ROS_INFO("Enter timer!");
+		time_flag = 1;
+	}
 
-	if(target.grasp_flag = true){
+	if(target.grasp_flag == true){
 		cout<<"enter timer"<<"---"<<"path is OK  "<<target.path_is_ok<<endl;
 
 		// target.q_compansate.push(mav.compute_translation());
@@ -766,9 +816,17 @@ void timerCallback(const ros::TimerEvent&){
 	}
 }
 
-
+/**
+ * @brief 遥控器控制
+ * 
+ * @param msg 
+ * @param res 
+ * @return true 
+ * @return false 
+ */
 bool safe_state_callback(camera_control::rc_state::Request &msg,camera_control::rc_state::Response &res)
 {
+	ROS_INFO("*****RC control!*****");
 	if(msg.state==1)global_state=process_state;
 	else if(msg.state==2)global_state=BACK_HOME_AND_LANGING;
 	else if(msg.state==3)global_state=FORCE_LANGING;
@@ -776,13 +834,13 @@ bool safe_state_callback(camera_control::rc_state::Request &msg,camera_control::
 	return true;
 }
 
-void trajectory_follow_success_flag_CallBack(const am_controller::success_flagConstPtr &msg)
-{
-	if(msg->success_flag==1)
-	{
-		trajectory_follow_success=true;
-	}
-}
+// void trajectory_follow_success_flag_CallBack(const am_controller::success_flagConstPtr &msg)
+// {
+// 	if(msg->success_flag==1)
+// 	{
+// 		trajectory_follow_success=true;
+// 	}
+// }
 
 void init_grasp(ros::ServiceClient &servoseter){
 
@@ -831,10 +889,11 @@ int main(int argc, char *argv[])
 	ros::Subscriber camera_pose_suber = n.subscribe("/camera_servo_pose",1,&CameraPos_CallBack);
 	ros::Subscriber local_pose_suber=n.subscribe("/mavros/vision_pose/pose",1,Local_pose_CallBack);///mavros/vision_pose/pose
 	ros::Subscriber target_rev=n.subscribe("/Tba_current",1,target_pose_callback);
-	ros::Subscriber trajectory_follow_success_flag_suber=n.subscribe("/trajectory_follow_success_flag",1,trajectory_follow_success_flag_CallBack);///mavros/vision_pose/pose
+	//ros::Subscriber trajectory_follow_success_flag_suber=n.subscribe("/trajectory_follow_success_flag",1,trajectory_follow_success_flag_CallBack);///mavros/vision_pose/pose
     //发布
 	ros::Publisher Path_puber = n.advertise<nav_msgs::Path>("/flx_path_plan",1);//gererator path and pub
 	marker_pub = n.advertise<visualization_msgs::Marker>("/target_marker",1);
+	big_marker_pub = n.advertise<visualization_msgs::Marker>("/big_marker",1);
 	body_pub = n.advertise<visualization_msgs::Marker>("/body_marker",1);
 	endeft_pub = n.advertise<visualization_msgs::Marker>("/endeffector",1);
 	ros::Publisher Trajectory_task_puber = n.advertise<camera_control::do_trajectory_task>("/trajectory_task_ready",1);//gererator path and pub
@@ -856,7 +915,7 @@ int main(int argc, char *argv[])
 	//variables
 	int last_state = -1;
 	bool along_marker_path = false;
-	bool trajectory_follow_success = false;
+	//bool trajectory_follow_success = false;
 	double time_control;
 	while(ros::ok()){
 		if(target.valid_marker_cnt>1000) target.valid_marker_cnt = 1000;
@@ -887,6 +946,7 @@ int main(int argc, char *argv[])
 						camera_control::set_interest_ID IDmsg;
 						IDmsg.request.id=25;
 						ROS_INFO("set_interest_ID 25.....");
+						//target_path_track node 返回的是小tag的数据
 						m_track_target.call(IDmsg);
 						if (IDmsg.response.id_ret==25)
 						{
@@ -894,16 +954,22 @@ int main(int argc, char *argv[])
 						}
 					}
 				}
-				if(target.valid_target_cnt>2)
+				//TODO: 需要明确大概多远能够看到小tag
+				if(target.valid_target_cnt>2)//看到两次小tag后
 				{
+						//状态跳转
+						
 						global_state=FLY_ALONG_TARGET;
 						process_state=FLY_ALONG_TARGET;
+						//时间控制
 						time_control=ros::Time::now().toSec(); 
-						//
+						//mav.s 记录当前yaw角 四元数
 						mav.s  = mav.Local_pose.orientation;
-						target.grasp_flag = true;
+						
+						
 						//sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
 				}
+				
 
 				//mav.Local_pose.position.z
 
@@ -936,61 +1002,67 @@ int main(int argc, char *argv[])
 				// valid_work_space+=msg.response.is_done;
 				// if(valid_work_space>2)
 				// {
-				if(ros::Time::now().toSec()-time_control>2.0)
+				if(ros::Time::now().toSec()-time_control>1.5)
 				{
-					global_state=HOLD_AND_GRASP;
-					process_state=HOLD_AND_GRASP;
+
 					time_control=ros::Time::now().toSec(); 
 					mav.s  = mav.Local_pose.orientation;
+					//规划轨迹
+					target.grasp_flag = true;
 					//sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
+				}
+				if(target.grasp_is_done = true){
+					global_state=GRASP_DONE;
+					process_state=GRASP_DONE;
 				}
 			
 				break;	
 			}
-			case HOLD_AND_GRASP:
-			{
-				if(global_state!=last_state)
-				{
-					ROS_INFO("HOLD_AND_GRASP.....");
-					last_state=global_state;
-				}
-				if(trajectory_follow_success)//wait for grasping done.           signal from trajectory controller node
-				{
-					global_state=GRASP_RISE;
-					process_state=GRASP_RISE;
-					time_control=ros::Time::now().toSec(); 
+
+			// case HOLD_AND_GRASP:
+			// {
+			// 	if(global_state!=last_state)
+			// 	{
+			// 		ROS_INFO("HOLD_AND_GRASP.....");
+			// 		last_state=global_state;
+			// 	}
+			// 	if(trajectory_follow_success)//wait for grasping done.           signal from trajectory controller node
+			// 	{
+			// 		global_state=GRASP_RISE;
+			// 		process_state=GRASP_RISE;
+			// 		time_control=ros::Time::now().toSec(); 
 					
-					mav.rise_position = mav.Local_pose.position;
-					// rise_pose_x=mav_x;
-					// rise_pose_y=mav_y;
-					// rise_pose_z=mav_z;
-					mav.s = mav.Local_pose.orientation;
+			// 		mav.rise_position = mav.Local_pose.position;
+			// 		// rise_pose_x=mav_x;
+			// 		// rise_pose_y=mav_y;
+			// 		// rise_pose_z=mav_z;
+			// 		mav.s = mav.Local_pose.orientation;
 					
-				}
+			// 	}
 
-				break;	
-			}
-			case GRASP_RISE:
-			{
-				if(global_state!=last_state)
-				{
-					ROS_INFO("GRASP_RISE.....");
-					last_state=global_state;
-				}
-				nav_msgs::Path m_path;//抓取完成后，将目标物抬起5cm
+			// 	break;	
+			// }
+			// case GRASP_RISE:
+			// {
+			// 	if(global_state!=last_state)
+			// 	{
+			// 		ROS_INFO("GRASP_RISE.....");
+			// 		last_state=global_state;
+			// 	}
+			// 	nav_msgs::Path m_path;//抓取完成后，将目标物抬起5cm
 
-				mav.generate_path(m_path,mav.rise_position.x,mav.rise_position.y,mav.rise_position.z+0.05,0,false,false);
+			// 	mav.generate_path(m_path,mav.rise_position.x,mav.rise_position.y,mav.rise_position.z+0.05,0,false,false);
 
-				if(m_path.poses.size())Path_puber.publish(m_path);
-				if(ros::Time::now().toSec()-time_control>3.0)
-				{
-					global_state=GRASP_DONE;
-					process_state=GRASP_DONE;
-					time_control=ros::Time::now().toSec(); 
-				}
+			// 	if(m_path.poses.size())Path_puber.publish(m_path);
+			// 	if(ros::Time::now().toSec()-time_control>3.0)
+			// 	{
+			// 		global_state=GRASP_DONE;
+			// 		process_state=GRASP_DONE;
+			// 		time_control=ros::Time::now().toSec(); 
+			// 	}
 
-				break;	
-			}
+			// 	break;	
+			// }
 			case GRASP_DONE:
 			{
 				if(global_state!=last_state)
@@ -999,15 +1071,7 @@ int main(int argc, char *argv[])
 					last_state=global_state;
 				}
 
-
-				am_controller::servoset_srv msg;
-				msg.request.cmd=5;
-				msg.request.pos1=-10;
-				msg.request.pos2=170;//pi/2;
-				msg.request.pos3=-70;
-				msg.request.pos4=0;
-				msg.request.action_time=3000;
-				limited_grasp_call(servoseter,msg);
+		
 				if(ros::Time::now().toSec()-time_control>1.0)
 				{
 					global_state=BACK_HOME_AND_LANGING;
@@ -1020,6 +1084,7 @@ int main(int argc, char *argv[])
 
 				break;	 
 			}
+			//TODO:x
 			case BACK_HOME_AND_LANGING:
 			{
 				if(global_state!=last_state)
@@ -1027,18 +1092,21 @@ int main(int argc, char *argv[])
 					ROS_INFO("BACK_HOME_AND_LANGING.....");
 					last_state=global_state;
 				}
-				am_controller::servoset_srv msg;
-				msg.request.cmd=5;
-				msg.request.pos1=-10;
-				msg.request.pos2=170;//pi/2;
-				msg.request.pos3=-70;
-				msg.request.pos4=0;
-				msg.request.action_time=2000;
-				limited_grasp_call(servoseter,msg);
+				//爪子已经收起来了
+				// am_controller::servoset_srv msg;
+				// msg.request.cmd=5;
+				// msg.request.pos1=-10;
+				// msg.request.pos2=170;//pi/2;
+				// msg.request.pos3=-70;
+				// msg.request.pos4=0;
+				// msg.request.action_time=2000;
+				// limited_grasp_call(servoseter,msg);
 				if(ros::Time::now().toSec()-time_control>0.5)
 				{
 					nav_msgs::Path m_path;
+					//返回原点
 					mav.generate_path(m_path,0,0,mav.Local_pose.position.z,0,false,false);
+					//下降
 					mav.generate_path(m_path,0,0,-5,0,false,false);
 					if(m_path.poses.size())Path_puber.publish(m_path);
 					time_control=ros::Time::now().toSec(); 
@@ -1072,11 +1140,12 @@ int main(int argc, char *argv[])
 
 
 		}
-	}
+	
 
 	//TODO: 
 	ros::spinOnce();
 	loop_rate.sleep();
+	}
 
 
 	return 0;
