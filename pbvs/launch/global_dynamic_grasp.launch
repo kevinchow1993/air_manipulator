@@ -1,0 +1,5 @@
+<launch>
+
+	<node  name="global_dynamic_grasp_sub" pkg="pbvs" type="global_dynamic_grasp_sub"  output="screen"/>
+	<node name="rc_state" pkg="camera_control" type="rc_state" output="screen"/>
+</launch>

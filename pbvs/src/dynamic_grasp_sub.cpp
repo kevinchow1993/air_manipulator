@@ -50,6 +50,7 @@ ros::Publisher endeft_pub;
 ros::Publisher body_pub;
 ros::ServiceClient servoseter;
 double first,second;
+double time_control=0;;
 Eigen::Isometry3d T_eft_lasttime;
 Eigen::Vector3d temp_target;
 //tf::TransformBroadcaster br;
@@ -325,7 +326,7 @@ public:
 			double target_x  = Posi_m.x;
 			double target_y  = Posi_m.y;
 
-			ROS_INFO("target_x,y=%f  %f/n",target_x,target_y);
+			ROS_INFO("target_x,y=%f  %f\n",target_x,target_y);
 		try{
 			
 			double start,duration=0;
@@ -346,7 +347,7 @@ public:
 
 			geometry_msgs::Pose poses;
 			geometry_msgs::PoseStamped poseStampeds;
-			double dt=0.05;
+			double dt=0.10;
 			grasp_traj.poses.clear();
 
 			for (double t=0.0; t <= traject->Duration(); t+= dt) {
@@ -390,8 +391,8 @@ public:
 		msg.request.cmd=6;
 		msg.request.pos1=0;
 		msg.request.pos2=0;//pi/2;
-		msg.request.pos3=0.21;
-		msg.request.pos4=-0.02;
+		msg.request.pos3=0.20;
+		msg.request.pos4=-0.01;
 		msg.request.action_time=2000;
 		servoseter.call(msg);
 		
@@ -540,8 +541,13 @@ void timerCallback(const ros::TimerEvent&){
 	// call_servo(set_point,target.q_compansate.front());
 	// target.q_compansate.pop();
 	// servoseter.call(servoset_srv_msg);
-
+	static int time_flag;
 	if(target.path_is_ok){
+		if(!time_flag){
+			
+			time_control = ros::Time::now().toSec();
+			time_flag = 1;
+		}
 		if(target.grasp_path.size()>5){
 			cout<<"grasp_path size is   "<<target.grasp_path.size()<<endl;
 
@@ -555,6 +561,7 @@ void timerCallback(const ros::TimerEvent&){
 			ros::Duration(0.5).sleep();
 			target.rise(servoseter);
 			target.grasp_is_done = true;
+			cout<<"grasp use"<<ros::Time::now().toSec()-time_control<<endl;
 		}
 
 	}

@@ -311,6 +311,7 @@ public:
 			targetx = Local_pose.position.x;
 			targety = Local_pose.position.y;
 
+
 		}
 		if(use_path_dir)//机头朝向目标物飞过去
 		{	
@@ -503,7 +504,7 @@ public:
 		bigmarker.pose.position.x = marker_pos.x;
 		bigmarker.pose.position.y = marker_pos.y;
 		bigmarker.pose.position.z = marker_pos.z;
-		cout<<"big marker:"<<marker_pos.x<<" "<<marker_pos.y<<" "<<marker_pos.z<<endl;
+		//cout<<"big marker:"<<marker_pos.x<<" "<<marker_pos.y<<" "<<marker_pos.z<<endl;
 
 
 	}
@@ -583,7 +584,7 @@ public:
 
 			geometry_msgs::Pose poses;
 			geometry_msgs::PoseStamped poseStampeds;
-			double dt=0.05;
+			double dt=0.1;
 			grasp_traj.poses.clear();
 
 			for (double t=0.0; t <= traject->Duration(); t+= dt) {
@@ -638,9 +639,9 @@ public:
 		msg.request.cmd=6;
 		msg.request.pos1=0;
 		msg.request.pos2=0;//pi/2;
-		msg.request.pos3=0.21;
-		msg.request.pos4=-0.02;
-		msg.request.action_time=2000;
+		msg.request.pos3=0.20;
+		msg.request.pos4=-0.01;
+		msg.request.action_time=1000;
 		servoseter.call(msg);
 		
 
@@ -783,7 +784,7 @@ void timerCallback(const ros::TimerEvent&){
 		time_flag = 1;
 	}
 
-	if(target.grasp_flag == true){
+	if(target.grasp_flag == true&&!target.grasp_is_done){
 		cout<<"enter timer"<<"---"<<"path is OK  "<<target.path_is_ok<<endl;
 
 		// target.q_compansate.push(mav.compute_translation());
@@ -802,7 +803,7 @@ void timerCallback(const ros::TimerEvent&){
 				servoseter.call(servoset_srv_msg);}
 			else if(!target.grasp_is_done){//判断抓取完成
 				target.grasp(servoseter);
-				ros::Duration(0.5).sleep();
+				ros::Duration(0.3).sleep();
 				target.rise(servoseter);
 				target.grasp_is_done = true;
 			}
@@ -917,6 +918,7 @@ int main(int argc, char *argv[])
 	bool along_marker_path = false;
 	//bool trajectory_follow_success = false;
 	double time_control;
+	double time_counter;
 	while(ros::ok()){
 		if(target.valid_marker_cnt>1000) target.valid_marker_cnt = 1000;
 		if(target.valid_target_cnt>1000) target.valid_target_cnt = 1000;
@@ -942,6 +944,7 @@ int main(int argc, char *argv[])
 					//距离目标物足够近了，转而看小目标物，不看大目标物。  
 					if(m_path.poses.size()>0&&m_path.poses.size()<7)//8
 					{
+						cout<<"path size is "<<m_path.poses.size()<<endl;
 						along_marker_path=true;
 						camera_control::set_interest_ID IDmsg;
 						IDmsg.request.id=25;
@@ -963,6 +966,7 @@ int main(int argc, char *argv[])
 						process_state=FLY_ALONG_TARGET;
 						//时间控制
 						time_control=ros::Time::now().toSec(); 
+
 						//mav.s 记录当前yaw角 四元数
 						mav.s  = mav.Local_pose.orientation;
 						
@@ -986,11 +990,17 @@ int main(int argc, char *argv[])
 				if(global_state!=last_state)
 				{
 					ROS_INFO("FLY_ALONG_TARGET.....");
+					time_counter=ros::Time::now().toSec(); 
 					last_state=global_state;
 				}
 				nav_msgs::Path m_path;
-				mav.generate_path(m_path,target.Posi_w.x,target.Posi_w.y,target.Posi_w.z+0.395,0.29,true,true);//39 25
-				if(m_path.poses.size())Path_puber.publish(m_path);
+				//ROS_INFO("target world pos is %2f %2f %2f\n",target.Posi_w.x,target.Posi_w.y,target.Posi_w.z);
+				mav.generate_path(m_path,target.Posi_w.x,target.Posi_w.y,target.Posi_w.z+0.395,0.00,true,true);//39 25
+				ROS_ERROR("target path size id %d",m_path.poses.size());
+				if(m_path.poses.size()){
+					Path_puber.publish(m_path);
+					ROS_INFO("target path has planned!");
+				}
 				// am_controller::servoset_srv msg;
 				// msg.request.cmd=7;//check valid space
 				// msg.request.pos1=0;
@@ -1002,19 +1012,23 @@ int main(int argc, char *argv[])
 				// valid_work_space+=msg.response.is_done;
 				// if(valid_work_space>2)
 				// {
-				if(ros::Time::now().toSec()-time_control>1.5)
+				if(ros::Time::now().toSec()-time_control>1)
 				{
+					//cout<<"did run this?"<<endl;
 
-					time_control=ros::Time::now().toSec(); 
+					//ROS_INFO("fly to target use %2f",ros::Time::now().toSec()-time_control);
+					 
 					mav.s  = mav.Local_pose.orientation;
 					//规划轨迹
 					target.grasp_flag = true;
+					if(target.grasp_is_done == true){
+						global_state=GRASP_DONE;
+						process_state=GRASP_DONE;
+						time_control=ros::Time::now().toSec();
+					}
 					//sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
 				}
-				if(target.grasp_is_done = true){
-					global_state=GRASP_DONE;
-					process_state=GRASP_DONE;
-				}
+
 			
 				break;	
 			}
@@ -1074,6 +1088,7 @@ int main(int argc, char *argv[])
 		
 				if(ros::Time::now().toSec()-time_control>1.0)
 				{
+					ROS_INFO("grasp done use %2f", ros::Time::now().toSec()-time_control);
 					global_state=BACK_HOME_AND_LANGING;
 					process_state=BACK_HOME_AND_LANGING;
 					time_control=ros::Time::now().toSec(); 
@@ -1090,6 +1105,7 @@ int main(int argc, char *argv[])
 				if(global_state!=last_state)
 				{
 					ROS_INFO("BACK_HOME_AND_LANGING.....");
+					ROS_INFO("from fly2Target to Backhome use %2f",time_counter - ros::Time::now().toSec());
 					last_state=global_state;
 				}
 				//爪子已经收起来了
@@ -1102,7 +1118,10 @@ int main(int argc, char *argv[])
 				// msg.request.action_time=2000;
 				// limited_grasp_call(servoseter,msg);
 				if(ros::Time::now().toSec()-time_control>0.5)
+
 				{
+
+
 					nav_msgs::Path m_path;
 					//返回原点
 					mav.generate_path(m_path,0,0,mav.Local_pose.position.z,0,false,false);
@@ -1126,7 +1145,7 @@ int main(int argc, char *argv[])
 				msg.request.pos2=170;//pi/2;
 				msg.request.pos3=-70;
 				msg.request.pos4=0;
-				msg.request.action_time=2000;
+				msg.request.action_time=1500;
 				limited_grasp_call(servoseter,msg);
 				if(ros::Time::now().toSec()-time_control>0.5)
 				{
