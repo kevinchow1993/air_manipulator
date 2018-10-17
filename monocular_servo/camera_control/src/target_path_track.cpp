@@ -169,14 +169,14 @@ void target_path_track::loop(void)
 			if(TagLost_flag==false)
 			{
 				TagLost_flag=true;
-				last_pose=150.0;
+				//last_pose=150.0;
 			}
 			int d_delay=tag_watch_dog-1500;
 			if (d_delay%50==0)
 			{
-				last_pose--;
+				last_pose++;
 				Set_Servo_Pos(last_pose);
-				if (last_pose==0)last_pose=150.0;
+				if (last_pose>150)last_pose=5.0;
 			}
 
 		}

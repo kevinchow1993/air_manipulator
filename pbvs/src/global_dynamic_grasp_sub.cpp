@@ -90,8 +90,9 @@ public:
 	double current_yaw;
 	double set_yaw;
 	geometry_msgs::Quaternion direction_yaw;
+	geometry_msgs::Point landing_posi; //降落点
 	geometry_msgs::Quaternion s;
-	geometry_msgs::Point rise_position;
+	geometry_msgs::Point rise_position;// 飞机起始点
 	Eigen::Isometry3d Twb;
 	visualization_msgs::Marker body;
 	Eigen::Vector3d delta_trans;
@@ -104,6 +105,10 @@ public:
 		delta_trans.setZero();
 		T_mav_last_time.setIdentity();
 		last_time = 0.0;
+
+		rise_position.x = 0.0;
+		rise_position.y = 0.0;
+		rise_position.z = 0.0;
 		current_yaw = 0.0;
 		set_yaw = 0.0;
 		distance = 0;
@@ -185,7 +190,7 @@ public:
 	 * @brief Set the Twb object
 	 * 
 	 * @param msg 
-	 */
+	 */ 
 	void set_Twb(const geometry_msgs::PoseStampedConstPtr &msg){
 		
 		
@@ -283,6 +288,35 @@ public:
 		return res;
 	}
 
+	void landing(nav_msgs::Path &m_path){
+
+		m_path.header.stamp = ros::Time::now();
+		m_path.header.frame_id = "/world";
+		geometry_msgs::PoseStamped pose;
+		pose.header.frame_id = "fcu";
+		double step = 0.07;
+		double hight = Local_pose.position.z +0.5;
+
+		pose.pose.orientation = s;
+		int size =hight/step;
+
+		
+		for(size_t i = 1; i < size; i++)
+		{
+			pose.pose.position.x = landing_posi.x;
+			pose.pose.position.y = landing_posi.y;
+			pose.pose.position.z = Local_pose.position.z- step*i;
+			m_path.poses.push_back(pose);
+
+		}
+		
+
+		
+		
+
+
+
+	}
 	/**
 	 * @brief 生成无人机轨迹
 	 * 
@@ -295,21 +329,21 @@ public:
 	 * @param offset_angle 
 	 */
 	//TODO: 没有飞超过目标物
-	void generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z,double prevent_xy_gap,bool use_path_dir, bool flytoback)
+	void  generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z,double des_step,bool use_path_dir, bool flytoback)
 	{
-		if(des_z>1.2)des_z=1.2;
+		if(des_z>0.80)des_z=0.80;
 		m_path.header.stamp = ros::Time::now();
 		m_path.header.frame_id = "/world";
 		geometry_msgs::Quaternion q;
 		double targetx = 0,targety = 0;
 		if(flytoback){
 			//飞到目标物后方 0.2 米处
-			targetx = Local_pose.position.x+cos(current_yaw)*0.2;
-			targety = Local_pose.position.y+sin(current_yaw)*0.2;
+			targetx = des_x+cos(current_yaw)*0.2;
+			targety = des_y+sin(current_yaw)*0.2;
 
 		}else{
-			targetx = Local_pose.position.x;
-			targety = Local_pose.position.y;
+			targetx = des_x;
+			targety = des_y;
 
 
 		}
@@ -337,31 +371,31 @@ public:
 
 		//pose.pose.orientation = direction_yaw;	//ADD BY KEVIN
 
-		pose.pose.position.x =targetx;
-		pose.pose.position.y = targety;
+		pose.pose.position.x =Local_pose.position.x;
+		pose.pose.position.y = Local_pose.position.y;
 		pose.pose.position.z = des_z;
 		//if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
-		double des_step,des_length;
-		des_step=0.05;
+		double des_length;
+		//des_step=0.02;
 
-		des_length=get_err(targetx,targety,des_z,des_x,des_y,des_z);																								
-		double delt_x=des_step/des_length*(des_x-targetx);
-		double delt_y=des_step/des_length*(des_y-targety);
+		des_length=get_err(Local_pose.position.x,Local_pose.position.y,des_z,des_x,des_y,des_z);																								
+		double delt_x=des_step/des_length*(targetx-Local_pose.position.x);
+		double delt_y=des_step/des_length*(targety-Local_pose.position.y);
 		//get_direct_by_line();
 		//首先生成路上的轨迹
 		//TODO:: 
 		for (int i = 1; i < des_length/des_step; ++i)
 		{
-			pose.pose.position.x =targetx+i*delt_x;
-			pose.pose.position.y =targety+i*delt_y;
+			pose.pose.position.x =Local_pose.position.x+i*delt_x;
+			pose.pose.position.y =Local_pose.position.y+i*delt_y;
 			pose.pose.position.z = des_z;
-			if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
+			if(get_err(pose.pose.position.x,pose.pose.position.y,0,targetx,targety,0)>=0)m_path.poses.push_back(pose);
 		}
-		pose.pose.position.x =des_x;
-		pose.pose.position.y =des_y;
-		pose.pose.position.z = des_z;
-		//如果距离大于限定值，则将点压入轨迹
-		if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
+		// pose.pose.position.x =des_x;
+		// pose.pose.position.y =des_y;
+		// pose.pose.position.z = des_z;
+		// //如果距离大于限定值，则将点压入轨迹
+		// if(get_err(pose.pose.position.x,pose.pose.position.y,0,des_x,des_y,0)>=prevent_xy_gap)m_path.poses.push_back(pose);
 
 	}
 
@@ -584,7 +618,7 @@ public:
 
 			geometry_msgs::Pose poses;
 			geometry_msgs::PoseStamped poseStampeds;
-			double dt=0.1;
+			double dt=0.08;
 			grasp_traj.poses.clear();
 
 			for (double t=0.0; t <= traject->Duration(); t+= dt) {
@@ -743,15 +777,18 @@ void CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg){
 **/
 void Local_pose_CallBack(const geometry_msgs::PoseStampedConstPtr &msg){
 	static int local_pose_flag;
-	if(local_pose_flag ==0){
-		ROS_INFO("Enter local pose callback");
-		local_pose_flag = 1;
-	}
+	
 	//cout<<"enter mav"<<endl;
 
 	mav.set_Twb(msg);
 	mav.sendTransformTwb();
 	mav.pub_mavmarker(body_pub);
+	if(local_pose_flag ==0){
+		ROS_INFO("Enter local pose callback");
+		local_pose_flag = 1;
+		mav.rise_position = mav.Local_pose.position;
+		ROS_INFO("START POINT IS:X:%2f  Y:%2f  Z:%2f",mav.rise_position.x,mav.rise_position.y,mav.rise_position.z);
+	}
 	//mav.display();
 
 
@@ -926,23 +963,26 @@ int main(int argc, char *argv[])
 		switch(global_state){
 			case FLY_ALONG_MARKER:
 			{
+				 
 				//标志位，判断是否还在这个循环中，这样写则进入这个状态的第一次会出现状态提示
 				if(global_state!=last_state)
 				{
+					
 					ROS_INFO("FLY_ALONG_MARKER.....");
 					last_state=global_state;
+
 				} 
 				if(along_marker_path==false)
 				{
 					nav_msgs::Path m_path;
 
 					//TODO: 规划到目标物后面
-					mav.generate_path(m_path,target.marker_pos.x,target.marker_pos.y,target.marker_pos.z+0.87,0.18,true,true);// 实时在这里把偏航角的信息加进去 offset angle =0
+					mav.generate_path(m_path,target.marker_pos.x,target.marker_pos.y,target.marker_pos.z+0.70,0.03,true,true);// 实时在这里把偏航角的信息加进去 offset angle =0
 					if(m_path.poses.size()>0) Path_puber.publish(m_path);//发布轨迹
 
 
 					//距离目标物足够近了，转而看小目标物，不看大目标物。  
-					if(m_path.poses.size()>0&&m_path.poses.size()<7)//8
+					if(m_path.poses.size()>0&&m_path.poses.size()<32)//8
 					{
 						cout<<"path size is "<<m_path.poses.size()<<endl;
 						along_marker_path=true;
@@ -958,7 +998,7 @@ int main(int argc, char *argv[])
 					}
 				}
 				//TODO: 需要明确大概多远能够看到小tag
-				if(target.valid_target_cnt>2)//看到两次小tag后
+				if(along_marker_path&&target.valid_target_cnt>2)//看到两次小tag后
 				{
 						//状态跳转
 						
@@ -983,6 +1023,7 @@ int main(int argc, char *argv[])
 				// 	msg.do_trajectory_task=1;
 				// 	Trajectory_task_puber.publish(msg);
 				// }
+				mav.s  = mav.Local_pose.orientation;
 				break;		
 			}
 			case FLY_ALONG_TARGET:
@@ -995,7 +1036,7 @@ int main(int argc, char *argv[])
 				}
 				nav_msgs::Path m_path;
 				//ROS_INFO("target world pos is %2f %2f %2f\n",target.Posi_w.x,target.Posi_w.y,target.Posi_w.z);
-				mav.generate_path(m_path,target.Posi_w.x,target.Posi_w.y,target.Posi_w.z+0.395,0.00,true,true);//39 25
+				mav.generate_path(m_path,target.Posi_w.x,target.Posi_w.y,target.Posi_w.z+0.35,0.03,true,true);//39 25
 				ROS_ERROR("target path size id %d",m_path.poses.size());
 				if(m_path.poses.size()){
 					Path_puber.publish(m_path);
@@ -1012,7 +1053,7 @@ int main(int argc, char *argv[])
 				// valid_work_space+=msg.response.is_done;
 				// if(valid_work_space>2)
 				// {
-				if(ros::Time::now().toSec()-time_control>1)
+				if(ros::Time::now().toSec()-time_control>2.5)
 				{
 					//cout<<"did run this?"<<endl;
 
@@ -1028,6 +1069,7 @@ int main(int argc, char *argv[])
 					}
 					//sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
 				}
+				mav.s  = mav.Local_pose.orientation;
 
 			
 				break;	
@@ -1096,47 +1138,56 @@ int main(int argc, char *argv[])
 					mav.s  = mav.Local_pose.orientation;
 				//	sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
 				}
+					mav.s  = mav.Local_pose.orientation;
 
 				break;	 
 			}
 			//TODO:x
-			case BACK_HOME_AND_LANGING:
+			case BACK_HOME_AND_LANGING://B3中间段
 			{
 				if(global_state!=last_state)
 				{
 					ROS_INFO("BACK_HOME_AND_LANGING.....");
 					ROS_INFO("from fly2Target to Backhome use %2f",time_counter - ros::Time::now().toSec());
+
+					mav.landing_posi = mav.Local_pose.position;
+					//ROS_INFO("START POINT IS:X:%2f  Y:%2f  Z:%2f",mav.rise_position.x,mav.rise_position.y,mav.rise_position.z);
 					last_state=global_state;
 				}
 				//爪子已经收起来了
-				// am_controller::servoset_srv msg;
-				// msg.request.cmd=5;
-				// msg.request.pos1=-10;
-				// msg.request.pos2=170;//pi/2;
-				// msg.request.pos3=-70;
-				// msg.request.pos4=0;
-				// msg.request.action_time=2000;
-				// limited_grasp_call(servoseter,msg);
-				if(ros::Time::now().toSec()-time_control>0.5)
+				am_controller::servoset_srv msg;
+				msg.request.cmd=5;
+				msg.request.pos1=-10;
+				msg.request.pos2=170;//pi/2;
+				msg.request.pos3=-70;
+				msg.request.pos4=0;
+				msg.request.action_time=2000;
+				limited_grasp_call(servoseter,msg);
+				if(ros::Time::now().toSec()-time_control>1.5)
 
 				{
 
 
 					nav_msgs::Path m_path;
 					//返回原点
-					mav.generate_path(m_path,0,0,mav.Local_pose.position.z,0,false,false);
+					mav.generate_path(m_path,mav.rise_position.x,mav.rise_position.y,mav.landing_posi.z+0.05,0.06,false,false);
 					//下降
-					mav.generate_path(m_path,0,0,-5,0,false,false);
+					//mav.generate_path(m_path,0,0,-5,0.05,false,false);
 					if(m_path.poses.size())Path_puber.publish(m_path);
-					time_control=ros::Time::now().toSec(); 
+					if(m_path.poses.size()<5 ){
+						global_state  = FORCE_LANGING;
+						process_state=FORCE_LANGING;
+					}
 				}
 				break;	
 			}
-			case FORCE_LANGING:
+			case FORCE_LANGING://B3 最下段模式
 			{	
 				if(global_state!=last_state)
 				{
 					ROS_INFO("FORCE_LANGING.....");
+					mav.landing_posi = mav.Local_pose.position;
+					mav.s = mav.Local_pose.orientation;
 					last_state=global_state;
 				}
 				am_controller::servoset_srv msg;
@@ -1150,7 +1201,7 @@ int main(int argc, char *argv[])
 				if(ros::Time::now().toSec()-time_control>0.5)
 				{
 					nav_msgs::Path m_path;
-					mav.generate_path(m_path,mav.Local_pose.position.x,mav.Local_pose.position.y,-5,0,false,false);
+					mav.landing(m_path);
 					if(m_path.poses.size())Path_puber.publish(m_path);
 					time_control=ros::Time::now().toSec(); 
 				}
