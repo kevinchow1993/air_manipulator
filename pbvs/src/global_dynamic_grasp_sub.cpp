@@ -331,7 +331,7 @@ public:
 	//TODO: 没有飞超过目标物
 	void  generate_path(nav_msgs::Path &m_path,double des_x,double des_y,double des_z,double des_step,bool use_path_dir, bool flytoback)
 	{
-		if(des_z>0.80)des_z=0.80;
+		if(des_z>0.85)des_z=0.85;//
 		m_path.header.stamp = ros::Time::now();
 		m_path.header.frame_id = "/world";
 		geometry_msgs::Quaternion q;
@@ -762,7 +762,7 @@ void CameraPos_CallBack(const camera_control::CameraPos::ConstPtr &msg){
 	}
 	float yaw_err =msg->cx - 320;
 		
-	 mav.set_yaw = mav.current_yaw -yaw_err*0.004;
+	 mav.set_yaw = mav.current_yaw -yaw_err*0.003;//0.004
 	// ROS_INFO("set_yaw :%f\t*****curret_yaw :%f",set_yaw*180/3.14,current_yaw*180/3.14);
 	 
 	 tf::quaternionTFToMsg(tf::createQuaternionFromYaw(mav.set_yaw),mav.direction_yaw);
@@ -977,12 +977,12 @@ int main(int argc, char *argv[])
 					nav_msgs::Path m_path;
 
 					//TODO: 规划到目标物后面
-					mav.generate_path(m_path,target.marker_pos.x,target.marker_pos.y,target.marker_pos.z+0.70,0.03,true,true);// 实时在这里把偏航角的信息加进去 offset angle =0
+					mav.generate_path(m_path,target.marker_pos.x,target.marker_pos.y,target.marker_pos.z+0.75,0.03,true,true);// 
 					if(m_path.poses.size()>0) Path_puber.publish(m_path);//发布轨迹
 
 
 					//距离目标物足够近了，转而看小目标物，不看大目标物。  
-					if(m_path.poses.size()>0&&m_path.poses.size()<32)//8
+					if(m_path.poses.size()>0&&m_path.poses.size()<30)//32
 					{
 						cout<<"path size is "<<m_path.poses.size()<<endl;
 						along_marker_path=true;
@@ -1053,7 +1053,7 @@ int main(int argc, char *argv[])
 				// valid_work_space+=msg.response.is_done;
 				// if(valid_work_space>2)
 				// {
-				if(ros::Time::now().toSec()-time_control>2.5)
+				if(ros::Time::now().toSec()-time_control>1.6)//1.4
 				{
 					//cout<<"did run this?"<<endl;
 
@@ -1065,6 +1065,8 @@ int main(int argc, char *argv[])
 					if(target.grasp_is_done == true){
 						global_state=GRASP_DONE;
 						process_state=GRASP_DONE;
+						
+						ROS_INFO("grasp done use %2f", ros::Time::now().toSec()-time_control-1.3);
 						time_control=ros::Time::now().toSec();
 					}
 					//sx=Local_pose.position.x;sy=Local_pose.position.y;sz=mav_qz;sw=mav_qw;
@@ -1128,9 +1130,9 @@ int main(int argc, char *argv[])
 				}
 
 		
-				if(ros::Time::now().toSec()-time_control>1.0)
+				if(ros::Time::now().toSec()-time_control>3.0)
 				{
-					ROS_INFO("grasp done use %2f", ros::Time::now().toSec()-time_control);
+					
 					global_state=BACK_HOME_AND_LANGING;
 					process_state=BACK_HOME_AND_LANGING;
 					time_control=ros::Time::now().toSec(); 
